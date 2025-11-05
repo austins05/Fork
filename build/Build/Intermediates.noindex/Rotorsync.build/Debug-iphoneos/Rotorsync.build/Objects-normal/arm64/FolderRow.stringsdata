@@ -1,0 +1,16 @@
+{
+  "source": "/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Features/FileManager/Views/Components/FolderRow.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%lld item%@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 16
+        }
+      }
+    ]
+  },
+  "version": 1
+}

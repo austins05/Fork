@@ -1,0 +1,168 @@
+{
+  "source": "/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Features/Pins/Views/Components/PinActionSheet.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Loading...",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 184
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Pin",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 153
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pin Name",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 64
+        }
+      },
+      {
+        "comment": "",
+        "key": "Icon",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 69
+        }
+      },
+      {
+        "comment": "",
+        "key": "Location",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 80
+        }
+      },
+      {
+        "comment": "",
+        "key": "Organization",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 107
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rename",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 66
+        }
+      },
+      {
+        "comment": "",
+        "key": "Current Icon",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 74
+        }
+      },
+      {
+        "comment": "",
+        "key": "Change",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 76
+        }
+      },
+      {
+        "comment": "",
+        "key": "Latitude",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 82
+        }
+      },
+      {
+        "comment": "",
+        "key": "Longitude",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 88
+        }
+      },
+      {
+        "comment": "",
+        "key": "Open in Google Maps",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 103
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Pin",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 104
+        }
+      },
+      {
+        "comment": "",
+        "key": "Drive To",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 99
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move to Folder",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 108
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save to Group",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 118
+        }
+      },
+      {
+        "comment": "",
+        "key": "Syncing to server...",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 134
+        }
+      },
+      {
+        "comment": "",
+        "key": "Open in Google Maps",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 149
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Pin",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 150
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 157
+        }
+      }
+    ]
+  },
+  "version": 1
+}

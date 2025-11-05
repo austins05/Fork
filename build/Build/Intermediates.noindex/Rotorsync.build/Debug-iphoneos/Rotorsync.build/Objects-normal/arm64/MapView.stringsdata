@@ -1,0 +1,112 @@
+{
+  "source": "/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Features/Map/Views/MapView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "User Location Options",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 185
+        }
+      },
+      {
+        "comment": "",
+        "key": "Import Error",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 239
+        }
+      },
+      {
+        "comment": "",
+        "key": "Stop Tracking",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 187
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start Tracking",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 191
+        }
+      },
+      {
+        "comment": "",
+        "key": "Drop Focus Pin",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 197
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 204
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 71,
+          "startingLine": 239
+        }
+      },
+      {
+        "comment": "",
+        "key": "Importing MPZ...",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 242
+        }
+      },
+      {
+        "comment": "",
+        "key": ".%@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 266
+        }
+      },
+      {
+        "comment": "",
+        "key": "MPH",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 289
+        }
+      },
+      {
+        "comment": "",
+        "key": "ft",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 305
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select Map Type",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 351
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 355
+        }
+      }
+    ]
+  },
+  "version": 1
+}

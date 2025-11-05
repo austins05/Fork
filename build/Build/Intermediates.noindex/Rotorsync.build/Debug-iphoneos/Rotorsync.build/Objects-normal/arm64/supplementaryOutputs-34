@@ -1,0 +1,48 @@
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Features/Authentication/Views/LoginView.swift":
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/LoginView.swiftconstvalues"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/LoginView.o"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/LoginView.swiftdeps"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/LoginView.d"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/LoginView.dia"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Features/Map/ViewModels/MapViewModel.swift":
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MapViewModel.dia"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MapViewModel.swiftconstvalues"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MapViewModel.d"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MapViewModel.swiftdeps"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MapViewModel.o"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Core/Database/Entities/PinEntity.swift":
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/PinEntity.dia"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/PinEntity.o"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/PinEntity.swiftconstvalues"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/PinEntity.d"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/PinEntity.swiftdeps"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Features/FileManager/Views/Components/FieldItemRow.swift":
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FieldItemRow.d"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FieldItemRow.swiftconstvalues"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FieldItemRow.swiftdeps"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FieldItemRow.o"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FieldItemRow.dia"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Models/Pin.swift":
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/Pin.swiftconstvalues"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/Pin.swiftdeps"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/Pin.dia"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/Pin.d"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/Pin.o"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Features/Map/Views/MapView.swift":
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MapView.dia"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MapView.swiftdeps"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MapView.o"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MapView.d"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MapView.swiftconstvalues"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Features/Groups/Views/ImportKMLView.swift":
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/ImportKMLView.swiftdeps"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/ImportKMLView.dia"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/ImportKMLView.swiftconstvalues"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/ImportKMLView.o"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/ImportKMLView.d"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Terralink/Models/FieldMapModels.swift":
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FieldMapModels.o"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FieldMapModels.swiftdeps"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FieldMapModels.d"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FieldMapModels.dia"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FieldMapModels.swiftconstvalues"

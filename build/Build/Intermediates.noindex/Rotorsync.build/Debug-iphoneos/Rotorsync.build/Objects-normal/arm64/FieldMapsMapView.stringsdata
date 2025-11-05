@@ -1,0 +1,88 @@
+{
+  "source": "/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Terralink/Views/FieldMapsMapView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Field Maps",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 36
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 40
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show All Fields",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 47
+        }
+      },
+      {
+        "comment": "",
+        "key": "Satellite",
+        "location": {
+          "startingColumn": 69,
+          "startingLine": 51
+        }
+      },
+      {
+        "comment": "",
+        "key": "Standard",
+        "location": {
+          "startingColumn": 83,
+          "startingLine": 51
+        }
+      },
+      {
+        "comment": "",
+        "key": "Area:",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 96
+        }
+      },
+      {
+        "comment": "",
+        "key": "Crop:",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 108
+        }
+      },
+      {
+        "comment": "",
+        "key": "Season:",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 120
+        }
+      },
+      {
+        "comment": "",
+        "key": "Center",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 135
+        }
+      },
+      {
+        "comment": "",
+        "key": "Navigate",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 149
+        }
+      }
+    ]
+  },
+  "version": 1
+}

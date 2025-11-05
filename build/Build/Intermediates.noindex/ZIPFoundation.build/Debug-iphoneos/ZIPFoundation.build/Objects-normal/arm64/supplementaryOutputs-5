@@ -1,0 +1,18 @@
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/ZIPFoundation/Sources/ZIPFoundation/Data+Serialization.swift":
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Data+Serialization.o"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Data+Serialization.swiftdeps"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Data+Serialization.swiftconstvalues"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Data+Serialization.d"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Data+Serialization.dia"
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/ZIPFoundation/Sources/ZIPFoundation/Data+CompressionDeprecated.swift":
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Data+CompressionDeprecated.swiftdeps"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Data+CompressionDeprecated.o"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Data+CompressionDeprecated.dia"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Data+CompressionDeprecated.d"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Data+CompressionDeprecated.swiftconstvalues"
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/ZIPFoundation/Sources/ZIPFoundation/Data+Compression.swift":
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Data+Compression.d"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Data+Compression.swiftconstvalues"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Data+Compression.o"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Data+Compression.dia"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Data+Compression.swiftdeps"

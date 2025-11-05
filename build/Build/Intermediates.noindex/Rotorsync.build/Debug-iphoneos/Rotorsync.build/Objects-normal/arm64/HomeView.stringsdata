@@ -1,0 +1,64 @@
+{
+  "source": "/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Features/Home/Views/HomeView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Welcome to RotorSync!",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 14
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hello, %@!",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 20
+        }
+      },
+      {
+        "comment": "",
+        "key": "Role: %@",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 22
+        }
+      },
+      {
+        "comment": "",
+        "key": "Device: %@",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 26
+        }
+      },
+      {
+        "comment": "",
+        "key": "MQTT Live Tracking",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 42
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 48
+        }
+      },
+      {
+        "comment": "",
+        "key": "Logout",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 80
+        }
+      }
+    ]
+  },
+  "version": 1
+}

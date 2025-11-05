@@ -1,0 +1,18 @@
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/ZIPFoundation/Sources/ZIPFoundation/Archive+Helpers.swift":
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+Helpers.d"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+Helpers.o"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+Helpers.swiftdeps"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+Helpers.dia"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+Helpers.swiftconstvalues"
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/ZIPFoundation/Sources/ZIPFoundation/Archive+MemoryFile.swift":
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+MemoryFile.swiftdeps"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+MemoryFile.o"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+MemoryFile.swiftconstvalues"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+MemoryFile.d"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+MemoryFile.dia"
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/ZIPFoundation/Sources/ZIPFoundation/Archive+Progress.swift":
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+Progress.swiftconstvalues"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+Progress.swiftdeps"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+Progress.dia"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+Progress.d"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+Progress.o"

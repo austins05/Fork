@@ -1,0 +1,30 @@
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/CocoaMQTT/Source/FramePubAck.swift":
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePubAck.o"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePubAck.dia"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePubAck.d"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePubAck.swiftdeps"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePubAck.swiftconstvalues"
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/CocoaMQTT/Source/FramePingResp.swift":
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePingResp.o"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePingResp.swiftdeps"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePingResp.swiftconstvalues"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePingResp.d"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePingResp.dia"
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/CocoaMQTT/Source/FramePingReq.swift":
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePingReq.d"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePingReq.o"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePingReq.swiftconstvalues"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePingReq.dia"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePingReq.swiftdeps"
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/CocoaMQTT/Source/FrameDisconnect.swift":
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FrameDisconnect.swiftdeps"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FrameDisconnect.swiftconstvalues"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FrameDisconnect.o"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FrameDisconnect.dia"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FrameDisconnect.d"
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/CocoaMQTT/Source/FramePubComp.swift":
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePubComp.dia"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePubComp.o"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePubComp.swiftconstvalues"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePubComp.d"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/FramePubComp.swiftdeps"

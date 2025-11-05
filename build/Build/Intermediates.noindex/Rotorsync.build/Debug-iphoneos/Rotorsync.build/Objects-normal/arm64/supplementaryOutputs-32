@@ -1,0 +1,48 @@
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Features/Groups/Views/CreateGroupView.swift":
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/CreateGroupView.dia"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/CreateGroupView.swiftdeps"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/CreateGroupView.d"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/CreateGroupView.swiftconstvalues"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/CreateGroupView.o"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Core/Networking/APIService.swift":
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/APIService.swiftconstvalues"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/APIService.d"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/APIService.o"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/APIService.dia"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/APIService.swiftdeps"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Core/Utilities/KMLParser.swift":
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/KMLParser.swiftconstvalues"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/KMLParser.d"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/KMLParser.o"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/KMLParser.dia"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/KMLParser.swiftdeps"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Features/Pins/Views/Components/PinActionSheet.swift":
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/PinActionSheet.swiftdeps"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/PinActionSheet.d"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/PinActionSheet.dia"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/PinActionSheet.o"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/PinActionSheet.swiftconstvalues"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Features/Settings/Views/SettingsView.swift":
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/SettingsView.swiftdeps"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/SettingsView.d"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/SettingsView.dia"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/SettingsView.swiftconstvalues"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/SettingsView.o"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Features/FileManager/Views/FileManagerView.swift":
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FileManagerView.o"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FileManagerView.d"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FileManagerView.swiftconstvalues"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FileManagerView.swiftdeps"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FileManagerView.dia"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Services/TemperatureService.swift":
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/TemperatureService.swiftconstvalues"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/TemperatureService.d"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/TemperatureService.dia"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/TemperatureService.o"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/TemperatureService.swiftdeps"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Features/Groups/Views/Components/GroupPinDetailSheet.swift":
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/GroupPinDetailSheet.dia"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/GroupPinDetailSheet.d"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/GroupPinDetailSheet.swiftconstvalues"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/GroupPinDetailSheet.swiftdeps"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/GroupPinDetailSheet.o"

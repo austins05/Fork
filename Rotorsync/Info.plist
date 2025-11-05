@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key></key>
+	<string></string>
+	<key>CFBundleGetInfoString</key>
+	<string></string>
+	<key>MKDirectionsApplicationSupportedModes</key>
+	<array/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>remote-notification</string>
+		<string>bluetooth-central</string>
+		<string>fetch</string>
+		<string>bluetooth-peripheral</string>
+		<string>processing</string>
+	</array>
+	<key>keychain-access-groups</key>
+	<string>com.rotorsync</string>
+</dict>
+</plist>

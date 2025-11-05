@@ -1,0 +1,30 @@
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/CocoaMQTT/Source/MqttDecodePubRec.swift":
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubRec.o"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubRec.swiftconstvalues"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubRec.d"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubRec.dia"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubRec.swiftdeps"
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/CocoaMQTT/Source/MqttDecodePubComp.swift":
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubComp.dia"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubComp.o"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubComp.swiftdeps"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubComp.d"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubComp.swiftconstvalues"
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/CocoaMQTT/Source/MqttDecodePublish.swift":
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePublish.d"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePublish.swiftconstvalues"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePublish.o"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePublish.dia"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePublish.swiftdeps"
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/CocoaMQTT/Source/MqttDecodePubAck.swift":
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubAck.dia"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubAck.swiftdeps"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubAck.o"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubAck.swiftconstvalues"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubAck.d"
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/CocoaMQTT/Source/MqttDecodePubRel.swift":
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubRel.swiftdeps"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubRel.o"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubRel.dia"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubRel.swiftconstvalues"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTT.build/Objects-normal/arm64/MqttDecodePubRel.d"

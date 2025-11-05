@@ -1,0 +1,4 @@
+module MqttCocoaAsyncSocket {
+umbrella "/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/MqttCocoaAsyncSocket/Source/GCD"
+export *
+}

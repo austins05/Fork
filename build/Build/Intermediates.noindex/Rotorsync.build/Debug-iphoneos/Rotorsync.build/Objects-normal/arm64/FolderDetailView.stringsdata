@@ -1,0 +1,112 @@
+{
+  "source": "/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Features/FileManager/Views/FolderDetailView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Batch Actions",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 59
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pins",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 69
+        }
+      },
+      {
+        "comment": "",
+        "key": "Fields",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 106
+        }
+      },
+      {
+        "comment": "",
+        "key": "No items in this folder",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 157
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 167
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete %lld Pin%@",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 203
+        }
+      },
+      {
+        "comment": "",
+        "key": "Export %lld Pin%@",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 207
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete %lld Field%@",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 213
+        }
+      },
+      {
+        "comment": "",
+        "key": "Export %lld Field%@",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 217
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 222
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 191
+        }
+      },
+      {
+        "comment": "",
+        "key": "Deselect All",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 187
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select All",
+        "location": {
+          "startingColumn": 59,
+          "startingLine": 187
+        }
+      }
+    ]
+  },
+  "version": 1
+}

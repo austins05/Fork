@@ -1,0 +1,104 @@
+{
+  "source": "/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Terralink/Views/FieldMapsManagementView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Field Maps",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 31
+        }
+      },
+      {
+        "comment": "",
+        "key": "Error",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 53
+        }
+      },
+      {
+        "comment": "",
+        "key": "Search Customers",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 36
+        }
+      },
+      {
+        "comment": "",
+        "key": "View on Map",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 42
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 54
+        }
+      },
+      {
+        "comment": "",
+        "key": "Selected Customers",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 66
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 69
+        }
+      },
+      {
+        "comment": "",
+        "key": "Importing...",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 96
+        }
+      },
+      {
+        "comment": "",
+        "key": "Import Field Maps",
+        "location": {
+          "startingColumn": 65,
+          "startingLine": 96
+        }
+      },
+      {
+        "comment": "",
+        "key": "No Field Maps",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 117
+        }
+      },
+      {
+        "comment": "",
+        "key": "Search for customers and import their field maps to get started",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 121
+        }
+      },
+      {
+        "comment": "",
+        "key": "Search Customers",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 130
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,18 @@
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/ZIPFoundation/Sources/ZIPFoundation/Entry+Serialization.swift":
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Entry+Serialization.o"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Entry+Serialization.swiftconstvalues"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Entry+Serialization.d"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Entry+Serialization.swiftdeps"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Entry+Serialization.dia"
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/ZIPFoundation/Sources/ZIPFoundation/Date+ZIP.swift":
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Date+ZIP.swiftconstvalues"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Date+ZIP.d"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Date+ZIP.o"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Date+ZIP.dia"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Date+ZIP.swiftdeps"
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/ZIPFoundation/Sources/ZIPFoundation/Entry+ZIP64.swift":
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Entry+ZIP64.d"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Entry+ZIP64.dia"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Entry+ZIP64.o"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Entry+ZIP64.swiftconstvalues"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Entry+ZIP64.swiftdeps"

@@ -1,0 +1,96 @@
+{
+  "source": "/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Features/Groups/Views/ImportKMLView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Import KML",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 126
+        }
+      },
+      {
+        "comment": "",
+        "key": "Uploading pins...",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 122
+        }
+      },
+      {
+        "comment": "",
+        "key": "Import Pins from KML",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 28
+        }
+      },
+      {
+        "comment": "",
+        "key": "Export pins from Google Maps as KML and import them here",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 32
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select KML File",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 41
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pins to Import",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 69
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld pins found",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 54
+        }
+      },
+      {
+        "comment": "",
+        "key": "Deselect All",
+        "location": {
+          "startingColumn": 83,
+          "startingLine": 58
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select All",
+        "location": {
+          "startingColumn": 100,
+          "startingLine": 58
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 130
+        }
+      },
+      {
+        "comment": "",
+        "key": "Import (%lld)",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 144
+        }
+      }
+    ]
+  },
+  "version": 1
+}

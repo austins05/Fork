@@ -1,0 +1,18 @@
+{
+  "" : {
+    "diagnostics" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTTWebSocket.build/Objects-normal/arm64/CocoaMQTTWebSocket-master.dia",
+    "emit-module-dependencies" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTTWebSocket.build/Objects-normal/arm64/CocoaMQTTWebSocket-master-emit-module.d",
+    "emit-module-diagnostics" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTTWebSocket.build/Objects-normal/arm64/CocoaMQTTWebSocket-master-emit-module.dia",
+    "swift-dependencies" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTTWebSocket.build/Objects-normal/arm64/CocoaMQTTWebSocket-master.swiftdeps"
+  },
+  "/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/CocoaMQTT/Source/CocoaMQTTWebSocket.swift" : {
+    "const-values" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTTWebSocket.build/Objects-normal/arm64/CocoaMQTTWebSocket.swiftconstvalues",
+    "dependencies" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTTWebSocket.build/Objects-normal/arm64/CocoaMQTTWebSocket.d",
+    "diagnostics" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTTWebSocket.build/Objects-normal/arm64/CocoaMQTTWebSocket.dia",
+    "index-unit-output-path" : "/CocoaMQTT.build/Debug-iphoneos/CocoaMQTTWebSocket.build/Objects-normal/arm64/CocoaMQTTWebSocket.o",
+    "llvm-bc" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTTWebSocket.build/Objects-normal/arm64/CocoaMQTTWebSocket.bc",
+    "object" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTTWebSocket.build/Objects-normal/arm64/CocoaMQTTWebSocket.o",
+    "swift-dependencies" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTTWebSocket.build/Objects-normal/arm64/CocoaMQTTWebSocket.swiftdeps",
+    "swiftmodule" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/CocoaMQTT.build/Debug-iphoneos/CocoaMQTTWebSocket.build/Objects-normal/arm64/CocoaMQTTWebSocket~partial.swiftmodule"
+  }
+}

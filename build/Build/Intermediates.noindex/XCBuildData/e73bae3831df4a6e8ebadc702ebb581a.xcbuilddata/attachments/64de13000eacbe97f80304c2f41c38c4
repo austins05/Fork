@@ -1,0 +1,48 @@
+{
+  "" : {
+    "diagnostics" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/Starscream-master.dia",
+    "emit-module-dependencies" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/Starscream-master-emit-module.d",
+    "emit-module-diagnostics" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/Starscream-master-emit-module.dia",
+    "swift-dependencies" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/Starscream-master.swiftdeps"
+  },
+  "/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/Starscream/Sources/Starscream/Compression.swift" : {
+    "const-values" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/Compression.swiftconstvalues",
+    "dependencies" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/Compression.d",
+    "diagnostics" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/Compression.dia",
+    "index-unit-output-path" : "/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/Compression.o",
+    "llvm-bc" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/Compression.bc",
+    "object" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/Compression.o",
+    "swift-dependencies" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/Compression.swiftdeps",
+    "swiftmodule" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/Compression~partial.swiftmodule"
+  },
+  "/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/Starscream/Sources/Starscream/SSLClientCertificate.swift" : {
+    "const-values" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/SSLClientCertificate.swiftconstvalues",
+    "dependencies" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/SSLClientCertificate.d",
+    "diagnostics" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/SSLClientCertificate.dia",
+    "index-unit-output-path" : "/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/SSLClientCertificate.o",
+    "llvm-bc" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/SSLClientCertificate.bc",
+    "object" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/SSLClientCertificate.o",
+    "swift-dependencies" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/SSLClientCertificate.swiftdeps",
+    "swiftmodule" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/SSLClientCertificate~partial.swiftmodule"
+  },
+  "/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/Starscream/Sources/Starscream/SSLSecurity.swift" : {
+    "const-values" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/SSLSecurity.swiftconstvalues",
+    "dependencies" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/SSLSecurity.d",
+    "diagnostics" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/SSLSecurity.dia",
+    "index-unit-output-path" : "/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/SSLSecurity.o",
+    "llvm-bc" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/SSLSecurity.bc",
+    "object" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/SSLSecurity.o",
+    "swift-dependencies" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/SSLSecurity.swiftdeps",
+    "swiftmodule" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/SSLSecurity~partial.swiftmodule"
+  },
+  "/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/Starscream/Sources/Starscream/WebSocket.swift" : {
+    "const-values" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/WebSocket.swiftconstvalues",
+    "dependencies" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/WebSocket.d",
+    "diagnostics" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/WebSocket.dia",
+    "index-unit-output-path" : "/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/WebSocket.o",
+    "llvm-bc" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/WebSocket.bc",
+    "object" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/WebSocket.o",
+    "swift-dependencies" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/WebSocket.swiftdeps",
+    "swiftmodule" : "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Starscream.build/Debug-iphoneos/Starscream.build/Objects-normal/arm64/WebSocket~partial.swiftmodule"
+  }
+}

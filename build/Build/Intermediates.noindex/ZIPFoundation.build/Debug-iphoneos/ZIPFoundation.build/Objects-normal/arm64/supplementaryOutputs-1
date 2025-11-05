@@ -1,0 +1,18 @@
+"/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/DerivedSources/resource_bundle_accessor.swift":
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/resource_bundle_accessor.o"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/resource_bundle_accessor.swiftdeps"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/resource_bundle_accessor.dia"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/resource_bundle_accessor.swiftconstvalues"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/resource_bundle_accessor.d"
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/ZIPFoundation/Sources/ZIPFoundation/Archive+BackingConfiguration.swift":
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+BackingConfiguration.swiftconstvalues"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+BackingConfiguration.d"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+BackingConfiguration.swiftdeps"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+BackingConfiguration.dia"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+BackingConfiguration.o"
+"/Users/aliyan/Desktop/rotorsync-development/build/SourcePackages/checkouts/ZIPFoundation/Sources/ZIPFoundation/Archive+Deprecated.swift":
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+Deprecated.swiftconstvalues"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+Deprecated.o"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+Deprecated.swiftdeps"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+Deprecated.d"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/ZIPFoundation.build/Debug-iphoneos/ZIPFoundation.build/Objects-normal/arm64/Archive+Deprecated.dia"

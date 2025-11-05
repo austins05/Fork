@@ -1,0 +1,16 @@
+{
+  "source": "/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Features/FileManager/Views/Components/FieldItemRow.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "• %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 29
+        }
+      }
+    ]
+  },
+  "version": 1
+}

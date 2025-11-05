@@ -1,0 +1,48 @@
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Features/Map/Views/MapRepresentable.swift":
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MapRepresentable.swiftdeps"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MapRepresentable.dia"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MapRepresentable.o"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MapRepresentable.swiftconstvalues"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MapRepresentable.d"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Features/Groups/Views/Components/StatView.swift":
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/StatView.swiftdeps"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/StatView.dia"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/StatView.swiftconstvalues"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/StatView.d"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/StatView.o"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Core/Database/Entities/FolderEntity.swift":
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FolderEntity.swiftconstvalues"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FolderEntity.swiftdeps"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FolderEntity.dia"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FolderEntity.o"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/FolderEntity.d"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Core/Security/KeychainService.swift":
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/KeychainService.dia"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/KeychainService.swiftdeps"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/KeychainService.swiftconstvalues"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/KeychainService.o"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/KeychainService.d"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Core/Managers/MQTTManager.swift":
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MQTTManager.swiftconstvalues"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MQTTManager.swiftdeps"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MQTTManager.o"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MQTTManager.d"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/MQTTManager.dia"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Models/User.swift":
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/User.dia"
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/User.swiftconstvalues"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/User.d"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/User.o"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/User.swiftdeps"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/AppDelegate.swift":
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/AppDelegate.swiftconstvalues"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/AppDelegate.o"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/AppDelegate.d"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/AppDelegate.swiftdeps"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/AppDelegate.dia"
+"/Users/aliyan/Desktop/rotorsync-development/Rotorsync/Models/Group.swift":
+  const-values: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/Group.swiftconstvalues"
+  object: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/Group.o"
+  dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/Group.d"
+  swift-dependencies: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/Group.swiftdeps"
+  diagnostics: "/Users/aliyan/Desktop/rotorsync-development/build/Build/Intermediates.noindex/Rotorsync.build/Debug-iphoneos/Rotorsync.build/Objects-normal/arm64/Group.dia"

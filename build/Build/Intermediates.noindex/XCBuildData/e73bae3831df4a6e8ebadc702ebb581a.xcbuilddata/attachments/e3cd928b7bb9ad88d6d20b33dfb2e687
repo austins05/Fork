@@ -1,0 +1,4 @@
+module CocoaMQTTWebSocket {
+header "CocoaMQTTWebSocket-Swift.h"
+export *
+}
