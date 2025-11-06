@@ -195,7 +195,7 @@ struct MonitorView: View {
                 title: "EGT MAX",
                 value: tempService.egtReadings.map(\.temperature).max() ?? 0,
                 unit: "°F",
-                color: Color(red: 1.0, green: 0.3, blue: 0.3),
+                color: Color(red: 0.2, green: 0.5, blue: 1.0),
                 threshold: 1550
             )
 
@@ -204,7 +204,7 @@ struct MonitorView: View {
                 title: "CHT MAX",
                 value: tempService.chtReadings.map(\.temperature).max() ?? 0,
                 unit: "°F",
-                color: Color(red: 1.0, green: 0.6, blue: 0.2),
+                color: Color(red: 0.2, green: 0.8, blue: 0.3),
                 threshold: 420
             )
 
@@ -379,7 +379,7 @@ struct ProfessionalBarPair: View {
                 ProfessionalSingleBar(
                     reading: chtReading,
                     label: "C",
-                    color: Color(red: 1.0, green: 0.6, blue: 0.2),
+                    color: Color(red: 0.2, green: 0.8, blue: 0.3),
                     isPrimary: primaryType == "CHT",
                     dangerThreshold: 450,
                     warningThreshold: 420,
@@ -391,7 +391,7 @@ struct ProfessionalBarPair: View {
                 ProfessionalSingleBar(
                     reading: egtReading,
                     label: "E",
-                    color: Color(red: 1.0, green: 0.3, blue: 0.3),
+                    color: Color(red: 0.2, green: 0.5, blue: 1.0),
                     isPrimary: primaryType == "EGT",
                     dangerThreshold: 1650,
                     warningThreshold: 1550,
