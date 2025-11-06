@@ -373,10 +373,10 @@ struct ProfessionalBarPair: View {
                     label: "E",
                     color: Color(red: 0.2, green: 0.5, blue: 1.0),
                     isPrimary: primaryType == "EGT",
-                    dangerThreshold: 1650,
-                    warningThreshold: 1550,
+                    dangerThreshold: 1680,
+                    warningThreshold: 1650,
                     minScale: 0,
-                    maxScale: 1700
+                    maxScale: 1800
                 )
             }
 
