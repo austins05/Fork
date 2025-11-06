@@ -157,23 +157,6 @@ struct MonitorView: View {
     // MARK: - Engine Data Display
     private var engineDataDisplay: some View {
         VStack(spacing: 16) {
-            // Section header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("ENGINE DATA")
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .foregroundColor(primaryTextColor)
-
-                    Text("CYLINDER HEAD & EXHAUST GAS TEMPERATURE")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundColor(secondaryTextColor.opacity(0.7))
-                        .tracking(1.5)
-                }
-
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-
             // EGT Max Difference (at top)
             HStack {
                 Spacer()
