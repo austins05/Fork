@@ -189,7 +189,18 @@ struct TemperatureGraphOverlay: View {
     }
 
     private func compactCylinderBars(cylinderNumber: Int, chtReading: TemperatureReading?, egtReading: TemperatureReading?) -> some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 3) {
+            // EGT temperature value (at top)
+            if let egt = egtReading {
+                Text("\(Int(egt.temperature))")
+                    .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                    .foregroundColor(Color(red: 0.2, green: 0.5, blue: 1.0))
+            } else {
+                Text("--")
+                    .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                    .foregroundColor(Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.3))
+            }
+
             // Cylinder number
             Text("\(cylinderNumber)")
                 .font(.system(size: 10, weight: .bold))
@@ -216,18 +227,15 @@ struct TemperatureGraphOverlay: View {
                 )
             }
 
-            // Temperature values
-            VStack(spacing: 1) {
-                if let cht = chtReading {
-                    Text("\(Int(cht.temperature))")
-                        .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                        .foregroundColor(Color(red: 0.2, green: 0.8, blue: 0.3))
-                }
-                if let egt = egtReading {
-                    Text("\(Int(egt.temperature))")
-                        .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                        .foregroundColor(Color(red: 0.2, green: 0.5, blue: 1.0))
-                }
+            // CHT temperature value (at bottom)
+            if let cht = chtReading {
+                Text("\(Int(cht.temperature))")
+                    .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                    .foregroundColor(Color(red: 0.2, green: 0.8, blue: 0.3))
+            } else {
+                Text("--")
+                    .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                    .foregroundColor(Color(red: 0.2, green: 0.8, blue: 0.3).opacity(0.3))
             }
         }
     }
