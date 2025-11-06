@@ -5,6 +5,7 @@ struct TemperatureGraphOverlay: View {
     @Binding var size: CGSize
     @Binding var isVisible: Bool
     @Binding var presetPosition: TemperatureGraphPosition
+    @Binding var presetSize: TemperatureGraphSize
     @State private var position: CGPoint = CGPoint(x: 150, y: 150)
     @State private var isDragging = false
 
@@ -93,9 +94,16 @@ struct TemperatureGraphOverlay: View {
                     position = newPosition.coordinates
                 }
             }
+            .onChange(of: presetSize) { newSize in
+                // Animate to new preset size when user changes it in settings
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    size = newSize.size
+                }
+            }
             .onAppear {
-                // Set initial position from preset
+                // Set initial position and size from presets
                 position = presetPosition.coordinates
+                size = presetSize.size
             }
         }
     }

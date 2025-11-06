@@ -20,11 +20,29 @@ enum TemperatureGraphPosition: String, CaseIterable {
     }
 }
 
+enum TemperatureGraphSize: String, CaseIterable {
+    case small = "Small"
+    case medium = "Medium"
+    case large = "Large"
+
+    var size: CGSize {
+        switch self {
+        case .small:
+            return CGSize(width: 200, height: 120)
+        case .medium:
+            return CGSize(width: 280, height: 180)
+        case .large:
+            return CGSize(width: 360, height: 240)
+        }
+    }
+}
+
 struct OverlaySettingsView: View {
     @Binding var overlayScale: CGFloat
     @Binding var shareLocation: Bool
     @Binding var showTemperatureGraph: Bool
     @Binding var temperatureGraphPosition: TemperatureGraphPosition
+    @Binding var temperatureGraphSizePreset: TemperatureGraphSize
 
     var body: some View {
         VStack(spacing: 20) {
@@ -93,6 +111,33 @@ struct OverlaySettingsView: View {
                                     .background(
                                         RoundedRectangle(cornerRadius: 8)
                                             .fill(temperatureGraphPosition == position ? Color.blue : Color.blue.opacity(0.1))
+                                    )
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 30)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Graph Size")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 30)
+                        .padding(.top, 8)
+
+                    HStack(spacing: 10) {
+                        ForEach(TemperatureGraphSize.allCases, id: \.self) { sizePreset in
+                            Button {
+                                temperatureGraphSizePreset = sizePreset
+                            } label: {
+                                Text(sizePreset.rawValue)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(temperatureGraphSizePreset == sizePreset ? .white : .blue)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(temperatureGraphSizePreset == sizePreset ? Color.blue : Color.blue.opacity(0.1))
                                     )
                             }
                         }
