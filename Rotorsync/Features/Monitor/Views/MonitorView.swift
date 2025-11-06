@@ -358,12 +358,23 @@ struct ProfessionalBarPair: View {
     }
 
     var body: some View {
-        VStack(spacing: 10) {
-            // Cylinder label at top
+        VStack(spacing: 6) {
+            // EGT temperature value (at top)
+            if let egt = egtReading {
+                Text("\(Int(egt.temperature))")
+                    .font(.system(size: 22, weight: .bold, design: .monospaced))
+                    .foregroundColor(Color(red: 0.2, green: 0.5, blue: 1.0))
+            } else {
+                Text("---")
+                    .font(.system(size: 22, weight: .bold, design: .monospaced))
+                    .foregroundColor(Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.3))
+            }
+
+            // Cylinder number
             Text("\(cylinderNumber)")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.system(size: 24, weight: .bold, design: .rounded))
                 .foregroundColor(labelTextColor)
-                .frame(width: 70, height: 32)
+                .frame(width: 70, height: 36)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
                         .fill(labelBackgroundColor)
@@ -398,6 +409,17 @@ struct ProfessionalBarPair: View {
                     minScale: 1200,
                     maxScale: 1700
                 )
+            }
+
+            // CHT temperature value (at bottom)
+            if let cht = chtReading {
+                Text("\(Int(cht.temperature))")
+                    .font(.system(size: 22, weight: .bold, design: .monospaced))
+                    .foregroundColor(Color(red: 0.2, green: 0.8, blue: 0.3))
+            } else {
+                Text("---")
+                    .font(.system(size: 22, weight: .bold, design: .monospaced))
+                    .foregroundColor(Color(red: 0.2, green: 0.8, blue: 0.3).opacity(0.3))
             }
         }
     }
@@ -446,20 +468,7 @@ struct ProfessionalSingleBar: View {
     }
 
     var body: some View {
-        VStack(spacing: 8) {
-            // Temperature value
-            if reading != nil {
-                Text(String(Int(temperature)))
-                    .font(.system(size: isPrimary ? 18 : 14, weight: .bold, design: .monospaced))
-                    .foregroundColor(barColor)
-                    .frame(height: 24)
-            } else {
-                Text("---")
-                    .font(.system(size: 14, weight: .bold, design: .monospaced))
-                    .foregroundColor(noDataColor)
-                    .frame(height: 24)
-            }
-
+        VStack(spacing: 6) {
             // Vertical bar
             ZStack(alignment: .bottom) {
                 // Background
