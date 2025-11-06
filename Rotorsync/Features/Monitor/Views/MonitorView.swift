@@ -449,18 +449,16 @@ struct ProfessionalSingleBar: View {
                             .strokeBorder(barBorderColor, lineWidth: 1)
                     )
 
-                // Red danger threshold line (only for CHT)
-                if label == "C" {
-                    VStack {
-                        Spacer()
-                        Rectangle()
-                            .fill(Color.red)
-                            .frame(width: isPrimary ? 34 : 26, height: 2)
-                        Spacer()
-                            .frame(height: barHeight(for: dangerThreshold) - 1)
-                    }
-                    .frame(height: 260)
+                // Red danger threshold line
+                VStack {
+                    Spacer()
+                    Rectangle()
+                        .fill(Color.red)
+                        .frame(width: isPrimary ? 34 : 26, height: 2)
+                    Spacer()
+                        .frame(height: barHeight(for: dangerThreshold) - 1)
                 }
+                .frame(height: 260)
 
                 // Temperature fill
                 if let reading = reading {
