@@ -53,11 +53,6 @@ struct MonitorView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Professional header
-                professionalHeader
-                    .padding(.horizontal, 24)
-                    .padding(.top, 12)
-
                 // Minimized connection error banner (only shows when disconnected)
                 if !tempService.isConnected {
                     connectionErrorBanner
@@ -124,66 +119,6 @@ struct MonitorView: View {
                     RoundedRectangle(cornerRadius: 12)
                         .strokeBorder(Color.orange.opacity(0.3), lineWidth: 1)
                 )
-        )
-    }
-
-    // MARK: - Professional Header
-    private var professionalHeader: some View {
-        HStack(alignment: .center, spacing: 16) {
-            // Left side - Title
-            VStack(alignment: .leading, spacing: 6) {
-                Text("ENGINE MONITOR")
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .foregroundColor(primaryTextColor)
-                    .tracking(1.2)
-
-                HStack(spacing: 10) {
-                    // Connection status indicator
-                    ZStack {
-                        Circle()
-                            .fill(tempService.isConnected ? Color.green.opacity(0.3) : Color.orange.opacity(0.3))
-                            .frame(width: 20, height: 20)
-                            .blur(radius: 4)
-
-                        Circle()
-                            .fill(tempService.isConnected ? Color.green : Color.orange)
-                            .frame(width: 10, height: 10)
-                    }
-
-                    Text(tempService.connectionStatus)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(secondaryTextColor)
-                }
-            }
-
-            Spacer()
-
-            // Right side - Live status
-            if let lastUpdate = tempService.lastUpdateTime {
-                VStack(alignment: .trailing, spacing: 4) {
-                    HStack(spacing: 6) {
-                        if timeAgo(from: lastUpdate) == "LIVE" {
-                            Circle()
-                                .fill(Color.green)
-                                .frame(width: 6, height: 6)
-                        }
-
-                        Text(timeAgo(from: lastUpdate))
-                            .font(.system(size: 22, weight: .bold, design: .monospaced))
-                            .foregroundColor(timeAgo(from: lastUpdate) == "LIVE" ? Color.green : secondaryTextColor)
-                    }
-
-                    Text("DATA STREAM")
-                        .font(.system(size: 10, weight: .semibold, design: .rounded))
-                        .foregroundColor(secondaryTextColor.opacity(0.7))
-                        .tracking(1)
-                }
-            }
-        }
-        .padding(.vertical, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(cardBackgroundColor)
         )
     }
 
@@ -326,17 +261,6 @@ struct MonitorView: View {
     }
 
     // MARK: - Helper
-    private func timeAgo(from date: Date) -> String {
-        let seconds = Int(Date().timeIntervalSince(date))
-        if seconds < 2 {
-            return "LIVE"
-        } else if seconds < 60 {
-            return "\(seconds)s"
-        } else {
-            return "\(seconds / 60)m"
-        }
-    }
-
     private func calculateMaxDifference(readings: [TemperatureReading]) -> Double {
         let temps = readings.map { $0.temperature }
         guard let max = temps.max(), let min = temps.min(), !temps.isEmpty else {
