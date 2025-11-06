@@ -212,8 +212,8 @@ struct TemperatureGraphOverlay: View {
                 compactBar(
                     temperature: chtReading?.temperature ?? 0,
                     color: Color(red: 0.2, green: 0.8, blue: 0.3),
-                    minScale: 250,
-                    maxScale: 500,
+                    minScale: 0,
+                    maxScale: 550,
                     width: (size.width - 120) / 15 // Responsive width
                 )
 
@@ -221,8 +221,8 @@ struct TemperatureGraphOverlay: View {
                 compactBar(
                     temperature: egtReading?.temperature ?? 0,
                     color: Color(red: 0.2, green: 0.5, blue: 1.0),
-                    minScale: 1200,
-                    maxScale: 1700,
+                    minScale: 0,
+                    maxScale: 1800,
                     width: (size.width - 120) / 15 // Responsive width
                 )
             }
