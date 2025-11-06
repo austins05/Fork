@@ -19,9 +19,9 @@ struct MapView: View {
     @State private var overlayScale: CGFloat = 1.0
     @State private var shareLocation: Bool = true
     @State private var showTemperatureGraph: Bool = false
-    @State private var temperatureGraphSize: CGSize = CGSize(width: 280, height: 180)
+    @State private var temperatureGraphSize: CGSize = CGSize(width: 250, height: 150)
     @State private var temperatureGraphPosition: TemperatureGraphPosition = .topLeft
-    @State private var temperatureGraphSizePreset: TemperatureGraphSize = .medium
+    @State private var temperatureGraphScale: CGFloat = 1.0
 
     @State private var droppedPins: [DroppedPinViewModel] = []
     @State private var groupPins: [APIPin] = []
@@ -189,7 +189,7 @@ struct MapView: View {
                 size: $temperatureGraphSize,
                 isVisible: $showTemperatureGraph,
                 presetPosition: $temperatureGraphPosition,
-                presetSize: $temperatureGraphSizePreset
+                graphScale: $temperatureGraphScale
             )
 
             bottomButtonsView()
@@ -383,7 +383,7 @@ struct MapView: View {
                     shareLocation: $shareLocation,
                     showTemperatureGraph: $showTemperatureGraph,
                     temperatureGraphPosition: $temperatureGraphPosition,
-                    temperatureGraphSizePreset: $temperatureGraphSizePreset
+                    temperatureGraphScale: $temperatureGraphScale
                 )
                 .presentationDetents([.fraction(0.55)])
             }

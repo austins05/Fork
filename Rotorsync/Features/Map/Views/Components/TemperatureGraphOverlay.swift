@@ -5,12 +5,13 @@ struct TemperatureGraphOverlay: View {
     @Binding var size: CGSize
     @Binding var isVisible: Bool
     @Binding var presetPosition: TemperatureGraphPosition
-    @Binding var presetSize: TemperatureGraphSize
+    @Binding var graphScale: CGFloat
     @State private var position: CGPoint = CGPoint(x: 150, y: 150)
     @State private var isDragging = false
 
-    private let minSize: CGSize = CGSize(width: 200, height: 120)
-    private let maxSize: CGSize = CGSize(width: 400, height: 300)
+    private let baseSize: CGSize = CGSize(width: 250, height: 150)
+    private let minSize: CGSize = CGSize(width: 175, height: 105)
+    private let maxSize: CGSize = CGSize(width: 375, height: 225)
 
     var body: some View {
         if isVisible {
@@ -94,16 +95,20 @@ struct TemperatureGraphOverlay: View {
                     position = newPosition.coordinates
                 }
             }
-            .onChange(of: presetSize) { newSize in
-                // Animate to new preset size when user changes it in settings
+            .onChange(of: graphScale) { newScale in
+                // Animate to new size when user changes scale in settings
                 withAnimation(.easeInOut(duration: 0.3)) {
-                    size = newSize.size
+                    let newWidth = max(minSize.width, min(maxSize.width, baseSize.width * newScale))
+                    let newHeight = max(minSize.height, min(maxSize.height, baseSize.height * newScale))
+                    size = CGSize(width: newWidth, height: newHeight)
                 }
             }
             .onAppear {
-                // Set initial position and size from presets
+                // Set initial position and size
                 position = presetPosition.coordinates
-                size = presetSize.size
+                let initialWidth = max(minSize.width, min(maxSize.width, baseSize.width * graphScale))
+                let initialHeight = max(minSize.height, min(maxSize.height, baseSize.height * graphScale))
+                size = CGSize(width: initialWidth, height: initialHeight)
             }
         }
     }

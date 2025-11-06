@@ -20,38 +20,21 @@ enum TemperatureGraphPosition: String, CaseIterable {
     }
 }
 
-enum TemperatureGraphSize: String, CaseIterable {
-    case small = "Small"
-    case medium = "Medium"
-    case large = "Large"
-
-    var size: CGSize {
-        switch self {
-        case .small:
-            return CGSize(width: 200, height: 120)
-        case .medium:
-            return CGSize(width: 280, height: 180)
-        case .large:
-            return CGSize(width: 360, height: 240)
-        }
-    }
-}
-
 struct OverlaySettingsView: View {
     @Binding var overlayScale: CGFloat
     @Binding var shareLocation: Bool
     @Binding var showTemperatureGraph: Bool
     @Binding var temperatureGraphPosition: TemperatureGraphPosition
-    @Binding var temperatureGraphSizePreset: TemperatureGraphSize
+    @Binding var temperatureGraphScale: CGFloat
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 12) {
             Text("Settings")
                 .font(.title2)
                 .fontWeight(.bold)
-                .padding(.bottom, 10)
+                .padding(.bottom, 5)
 
-            VStack(alignment: .leading) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text("Overlay Size (\(String(format: "%.1f", overlayScale))x)")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -67,7 +50,7 @@ struct OverlaySettingsView: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
             }
-            .padding(.horizontal, 30)
+            .padding(.horizontal, 20)
 
             HStack {
                 Text("Share My Location")
@@ -78,7 +61,7 @@ struct OverlaySettingsView: View {
                     .labelsHidden()
                     .tint(.blue)
             }
-            .padding(.horizontal, 30)
+            .padding(.horizontal, 20)
 
             HStack {
                 Text("Show Temperature Graph")
@@ -89,25 +72,24 @@ struct OverlaySettingsView: View {
                     .labelsHidden()
                     .tint(.blue)
             }
-            .padding(.horizontal, 30)
+            .padding(.horizontal, 20)
 
             if showTemperatureGraph {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text("Graph Position")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                        .padding(.horizontal, 30)
 
-                    HStack(spacing: 10) {
+                    HStack(spacing: 8) {
                         ForEach(TemperatureGraphPosition.allCases, id: \.self) { position in
                             Button {
                                 temperatureGraphPosition = position
                             } label: {
                                 Text(position.rawValue)
-                                    .font(.system(size: 12, weight: .medium))
+                                    .font(.system(size: 11, weight: .medium))
                                     .foregroundColor(temperatureGraphPosition == position ? .white : .blue)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
                                     .background(
                                         RoundedRectangle(cornerRadius: 8)
                                             .fill(temperatureGraphPosition == position ? Color.blue : Color.blue.opacity(0.1))
@@ -115,39 +97,31 @@ struct OverlaySettingsView: View {
                             }
                         }
                     }
-                    .padding(.horizontal, 30)
                 }
+                .padding(.horizontal, 20)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Graph Size")
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Graph Size (\(String(format: "%.1f", temperatureGraphScale))x)")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                        .padding(.horizontal, 30)
-                        .padding(.top, 8)
 
-                    HStack(spacing: 10) {
-                        ForEach(TemperatureGraphSize.allCases, id: \.self) { sizePreset in
-                            Button {
-                                temperatureGraphSizePreset = sizePreset
-                            } label: {
-                                Text(sizePreset.rawValue)
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(temperatureGraphSizePreset == sizePreset ? .white : .blue)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .fill(temperatureGraphSizePreset == sizePreset ? Color.blue : Color.blue.opacity(0.1))
-                                    )
-                            }
-                        }
+                    Slider(value: $temperatureGraphScale, in: 0.7...1.5, step: 0.1)
+                        .tint(.blue)
+
+                    HStack {
+                        Text("Small")
+                        Spacer()
+                        Text("Large")
                     }
-                    .padding(.horizontal, 30)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
                 }
+                .padding(.horizontal, 20)
             }
 
             Spacer()
         }
-        .padding(.top, 10)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
     }
 }
