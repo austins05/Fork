@@ -123,7 +123,7 @@ struct TemperatureGraphOverlay: View {
             HStack(spacing: 12) {
                 HStack(spacing: 4) {
                     Rectangle()
-                        .fill(Color(red: 1.0, green: 0.3, blue: 0.3))
+                        .fill(Color(red: 0.2, green: 0.5, blue: 1.0))
                         .frame(width: 10, height: 2)
                     Text("EGT")
                         .font(.system(size: 8, weight: .semibold))
@@ -132,7 +132,7 @@ struct TemperatureGraphOverlay: View {
 
                 HStack(spacing: 4) {
                     Rectangle()
-                        .fill(Color(red: 1.0, green: 0.6, blue: 0.2))
+                        .fill(Color(red: 0.2, green: 0.8, blue: 0.3))
                         .frame(width: 10, height: 2)
                     Text("CHT")
                         .font(.system(size: 8, weight: .semibold))
@@ -146,12 +146,12 @@ struct TemperatureGraphOverlay: View {
                     if let maxEGT = temperatureService.egtReadings.map(\.temperature).max() {
                         Text("EGT: \(Int(maxEGT))°F")
                             .font(.system(size: 8, weight: .bold, design: .monospaced))
-                            .foregroundColor(Color(red: 1.0, green: 0.3, blue: 0.3))
+                            .foregroundColor(Color(red: 0.2, green: 0.5, blue: 1.0))
                     }
                     if let maxCHT = temperatureService.chtReadings.map(\.temperature).max() {
                         Text("CHT: \(Int(maxCHT))°F")
                             .font(.system(size: 8, weight: .bold, design: .monospaced))
-                            .foregroundColor(Color(red: 1.0, green: 0.6, blue: 0.2))
+                            .foregroundColor(Color(red: 0.2, green: 0.8, blue: 0.3))
                     }
                 }
             }
@@ -200,7 +200,7 @@ struct TemperatureGraphOverlay: View {
                 // CHT bar
                 compactBar(
                     temperature: chtReading?.temperature ?? 0,
-                    color: Color(red: 1.0, green: 0.6, blue: 0.2),
+                    color: Color(red: 0.2, green: 0.8, blue: 0.3),
                     minScale: 250,
                     maxScale: 500,
                     width: (size.width - 120) / 15 // Responsive width
@@ -209,7 +209,7 @@ struct TemperatureGraphOverlay: View {
                 // EGT bar
                 compactBar(
                     temperature: egtReading?.temperature ?? 0,
-                    color: Color(red: 1.0, green: 0.3, blue: 0.3),
+                    color: Color(red: 0.2, green: 0.5, blue: 1.0),
                     minScale: 1200,
                     maxScale: 1700,
                     width: (size.width - 120) / 15 // Responsive width
@@ -221,12 +221,12 @@ struct TemperatureGraphOverlay: View {
                 if let cht = chtReading {
                     Text("\(Int(cht.temperature))")
                         .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                        .foregroundColor(Color(red: 1.0, green: 0.6, blue: 0.2))
+                        .foregroundColor(Color(red: 0.2, green: 0.8, blue: 0.3))
                 }
                 if let egt = egtReading {
                     Text("\(Int(egt.temperature))")
                         .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                        .foregroundColor(Color(red: 1.0, green: 0.3, blue: 0.3))
+                        .foregroundColor(Color(red: 0.2, green: 0.5, blue: 1.0))
                 }
             }
         }
