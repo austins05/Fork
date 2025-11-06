@@ -1,0 +1,36 @@
+[Unit]
+Description=iPad Temperature Monitor (PeerTalk)
+After=network.target multi-user.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi
+Environment=PYTHONUNBUFFERED=1
+
+# Kill any conflicting processes before starting
+ExecStartPre=/bin/bash -c 'killall -9 python3 iproxy 2>/dev/null || true'
+ExecStartPre=/bin/sleep 2
+
+# Start iproxy first (port forwarding)
+ExecStartPre=/bin/bash -c 'iproxy 2345 2345 >/dev/null 2>&1 &'
+ExecStartPre=/bin/sleep 2
+
+# Start the temperature daemon
+ExecStart=/usr/bin/python3 /home/pi/peertalk_temp_sender.py
+
+# Cleanup on stop
+ExecStopPost=/bin/bash -c 'killall -9 iproxy 2>/dev/null || true'
+
+# Restart on failure
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=temp-monitor
+
+[Install]
+WantedBy=multi-user.target
