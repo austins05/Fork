@@ -58,23 +58,29 @@ struct MonitorView: View {
                     .padding(.horizontal, 24)
                     .padding(.top, 12)
 
-                if tempService.isConnected {
-                    ScrollView {
-                        VStack(spacing: 32) {
-                            // Stats overview
-                            statsOverview
-                                .padding(.horizontal, 24)
-                                .padding(.top, 24)
-
-                            // Single unified engine data display
-                            engineDataDisplay
-                                .padding(.horizontal, 24)
-                                .padding(.bottom, 32)
-                        }
-                    }
-                } else {
-                    professionalWaitingView
+                // Minimized connection error banner (only shows when disconnected)
+                if !tempService.isConnected {
+                    connectionErrorBanner
+                        .padding(.horizontal, 24)
+                        .padding(.top, 12)
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
+
+                // Always show content (with last known data when disconnected)
+                ScrollView {
+                    VStack(spacing: 32) {
+                        // Stats overview
+                        statsOverview
+                            .padding(.horizontal, 24)
+                            .padding(.top, 24)
+
+                        // Single unified engine data display
+                        engineDataDisplay
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 32)
+                    }
+                }
+                .opacity(tempService.isConnected ? 1.0 : 0.6)
 
                 Spacer()
             }
@@ -83,6 +89,42 @@ struct MonitorView: View {
         .onAppear {
             tempService.startListening()
         }
+    }
+
+    // MARK: - Connection Error Banner
+    private var connectionErrorBanner: some View {
+        HStack(spacing: 12) {
+            // Warning icon
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.orange)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Connection Lost")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundColor(primaryTextColor)
+
+                Text(tempService.connectionStatus)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(secondaryTextColor.opacity(0.8))
+            }
+
+            Spacer()
+
+            // Reconnecting indicator
+            ProgressView()
+                .scaleEffect(0.8)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.orange.opacity(colorScheme == .dark ? 0.15 : 0.1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(Color.orange.opacity(0.3), lineWidth: 1)
+                )
+        )
     }
 
     // MARK: - Professional Header
@@ -227,39 +269,6 @@ struct MonitorView: View {
                 )
                 .shadow(color: borderColor.opacity(0.3), radius: 20, x: 0, y: 10)
         )
-    }
-
-    // MARK: - Professional Waiting View
-    private var professionalWaitingView: some View {
-        VStack(spacing: 40) {
-            // Animated connection icon
-            ZStack {
-                Circle()
-                    .stroke(borderColor, lineWidth: 2)
-                    .frame(width: 120, height: 120)
-
-                Circle()
-                    .stroke(Color.orange.opacity(0.3), lineWidth: 2)
-                    .frame(width: 100, height: 100)
-
-                Image(systemName: "antenna.radiowaves.left.and.right")
-                    .font(.system(size: 50, weight: .light))
-                    .foregroundColor(secondaryTextColor.opacity(0.6))
-            }
-
-            VStack(spacing: 12) {
-                Text("Awaiting Connection")
-                    .font(.system(size: 28, weight: .semibold, design: .rounded))
-                    .foregroundColor(primaryTextColor.opacity(0.8))
-
-                Text(tempService.connectionStatus)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(secondaryTextColor.opacity(0.7))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Helper
