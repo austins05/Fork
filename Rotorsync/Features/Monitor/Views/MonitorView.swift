@@ -160,24 +160,26 @@ struct MonitorView: View {
             // EGT Max Difference (at top)
             HStack {
                 Spacer()
+                let egtDiff = calculateMaxDifference(readings: tempService.egtReadings)
+                let egtDiffExceeded = egtDiff >= 100
                 VStack(spacing: 2) {
                     Text("EGT MAX DIFF")
                         .font(.system(size: 9, weight: .semibold, design: .rounded))
                         .foregroundColor(secondaryTextColor.opacity(0.6))
                         .tracking(0.8)
 
-                    Text("\(Int(calculateMaxDifference(readings: tempService.egtReadings)))°F")
+                    Text("\(Int(egtDiff))°F")
                         .font(.system(size: 18, weight: .bold, design: .monospaced))
-                        .foregroundColor(Color(red: 0.2, green: 0.5, blue: 1.0))
+                        .foregroundColor(egtDiffExceeded ? .white : Color(red: 0.2, green: 0.5, blue: 1.0))
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(red: 0.2, green: 0.5, blue: 1.0).opacity(colorScheme == .dark ? 0.08 : 0.12))
+                        .fill(egtDiffExceeded ? Color.red.opacity(0.85) : Color(red: 0.2, green: 0.5, blue: 1.0).opacity(colorScheme == .dark ? 0.08 : 0.12))
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .strokeBorder(Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.3), lineWidth: 1)
+                                .strokeBorder(egtDiffExceeded ? Color.red : Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.3), lineWidth: 1)
                         )
                 )
                 Spacer()
@@ -207,24 +209,26 @@ struct MonitorView: View {
             // CHT Max Difference (at bottom)
             HStack {
                 Spacer()
+                let chtDiff = calculateMaxDifference(readings: tempService.chtReadings)
+                let chtDiffExceeded = chtDiff >= 70
                 VStack(spacing: 2) {
                     Text("CHT MAX DIFF")
                         .font(.system(size: 9, weight: .semibold, design: .rounded))
                         .foregroundColor(secondaryTextColor.opacity(0.6))
                         .tracking(0.8)
 
-                    Text("\(Int(calculateMaxDifference(readings: tempService.chtReadings)))°F")
+                    Text("\(Int(chtDiff))°F")
                         .font(.system(size: 18, weight: .bold, design: .monospaced))
-                        .foregroundColor(Color(red: 0.2, green: 0.8, blue: 0.3))
+                        .foregroundColor(chtDiffExceeded ? .white : Color(red: 0.2, green: 0.8, blue: 0.3))
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(red: 0.2, green: 0.8, blue: 0.3).opacity(colorScheme == .dark ? 0.08 : 0.12))
+                        .fill(chtDiffExceeded ? Color.red.opacity(0.85) : Color(red: 0.2, green: 0.8, blue: 0.3).opacity(colorScheme == .dark ? 0.08 : 0.12))
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .strokeBorder(Color(red: 0.2, green: 0.8, blue: 0.3).opacity(0.3), lineWidth: 1)
+                                .strokeBorder(chtDiffExceeded ? Color.red : Color(red: 0.2, green: 0.8, blue: 0.3).opacity(0.3), lineWidth: 1)
                         )
                 )
                 Spacer()
