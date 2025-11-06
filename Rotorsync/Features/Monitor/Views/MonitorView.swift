@@ -363,8 +363,8 @@ struct ProfessionalBarPair: View {
                     isPrimary: primaryType == "CHT",
                     dangerThreshold: 500,
                     warningThreshold: 480,
-                    minScale: 250,
-                    maxScale: 500
+                    minScale: 0,
+                    maxScale: 550
                 )
 
                 // EGT bar
@@ -375,7 +375,7 @@ struct ProfessionalBarPair: View {
                     isPrimary: primaryType == "EGT",
                     dangerThreshold: 1650,
                     warningThreshold: 1550,
-                    minScale: 1200,
+                    minScale: 0,
                     maxScale: 1700
                 )
             }
