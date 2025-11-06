@@ -239,6 +239,33 @@ struct MonitorView: View {
             }
             .padding(.horizontal, 20)
 
+            // EGT Max Difference (at top)
+            HStack {
+                Spacer()
+                VStack(spacing: 2) {
+                    Text("EGT MAX DIFF")
+                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                        .foregroundColor(secondaryTextColor.opacity(0.6))
+                        .tracking(0.8)
+
+                    Text("\(Int(calculateMaxDifference(readings: tempService.egtReadings)))°F")
+                        .font(.system(size: 18, weight: .bold, design: .monospaced))
+                        .foregroundColor(Color(red: 0.2, green: 0.5, blue: 1.0))
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(red: 0.2, green: 0.5, blue: 1.0).opacity(colorScheme == .dark ? 0.08 : 0.12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .strokeBorder(Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.3), lineWidth: 1)
+                        )
+                )
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+
             // Horizontal scrolling bars - all 6 cylinders with paired CHT/EGT
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 18) {
@@ -258,6 +285,33 @@ struct MonitorView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 8)
             }
+
+            // CHT Max Difference (at bottom)
+            HStack {
+                Spacer()
+                VStack(spacing: 2) {
+                    Text("CHT MAX DIFF")
+                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                        .foregroundColor(secondaryTextColor.opacity(0.6))
+                        .tracking(0.8)
+
+                    Text("\(Int(calculateMaxDifference(readings: tempService.chtReadings)))°F")
+                        .font(.system(size: 18, weight: .bold, design: .monospaced))
+                        .foregroundColor(Color(red: 0.2, green: 0.8, blue: 0.3))
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(red: 0.2, green: 0.8, blue: 0.3).opacity(colorScheme == .dark ? 0.08 : 0.12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .strokeBorder(Color(red: 0.2, green: 0.8, blue: 0.3).opacity(0.3), lineWidth: 1)
+                        )
+                )
+                Spacer()
+            }
+            .padding(.horizontal, 20)
         }
         .padding(.vertical, 20)
         .background(
@@ -281,6 +335,14 @@ struct MonitorView: View {
         } else {
             return "\(seconds / 60)m"
         }
+    }
+
+    private func calculateMaxDifference(readings: [TemperatureReading]) -> Double {
+        let temps = readings.map { $0.temperature }
+        guard let max = temps.max(), let min = temps.min(), !temps.isEmpty else {
+            return 0
+        }
+        return max - min
     }
 }
 
