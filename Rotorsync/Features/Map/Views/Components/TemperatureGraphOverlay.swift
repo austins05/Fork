@@ -39,8 +39,8 @@ struct TemperatureGraphOverlay: View {
                             .frame(width: 6, height: 6)
                     }
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
                 .background(Color.black.opacity(0.85))
                 .gesture(
                     DragGesture()
@@ -63,8 +63,8 @@ struct TemperatureGraphOverlay: View {
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.black.opacity(0.75))
-                    .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 4)
             )
+            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 0)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
@@ -72,13 +72,13 @@ struct TemperatureGraphOverlay: View {
             .overlay(
                 // Resize handle (bottom right corner)
                 Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(.white.opacity(0.5))
-                    .padding(8)
+                    .padding(6)
                     .background(Color.white.opacity(0.1))
                     .clipShape(Circle())
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    .padding(8)
+                    .padding(6)
                     .gesture(
                         DragGesture()
                             .onChanged { value in
@@ -114,49 +114,49 @@ struct TemperatureGraphOverlay: View {
     }
 
     private var graphContent: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             // Legend
-            HStack(spacing: 16) {
+            HStack(spacing: 12) {
                 HStack(spacing: 4) {
                     Rectangle()
                         .fill(Color(red: 1.0, green: 0.3, blue: 0.3))
-                        .frame(width: 12, height: 3)
+                        .frame(width: 10, height: 2)
                     Text("EGT")
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(.system(size: 8, weight: .semibold))
                         .foregroundColor(.white.opacity(0.7))
                 }
 
                 HStack(spacing: 4) {
                     Rectangle()
                         .fill(Color(red: 1.0, green: 0.6, blue: 0.2))
-                        .frame(width: 12, height: 3)
+                        .frame(width: 10, height: 2)
                     Text("CHT")
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(.system(size: 8, weight: .semibold))
                         .foregroundColor(.white.opacity(0.7))
                 }
 
                 Spacer()
 
                 // Max values
-                VStack(alignment: .trailing, spacing: 2) {
+                VStack(alignment: .trailing, spacing: 1) {
                     if let maxEGT = temperatureService.egtReadings.map(\.temperature).max() {
                         Text("EGT: \(Int(maxEGT))°F")
-                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
                             .foregroundColor(Color(red: 1.0, green: 0.3, blue: 0.3))
                     }
                     if let maxCHT = temperatureService.chtReadings.map(\.temperature).max() {
                         Text("CHT: \(Int(maxCHT))°F")
-                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
                             .foregroundColor(Color(red: 1.0, green: 0.6, blue: 0.2))
                     }
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.top, 8)
+            .padding(.horizontal, 10)
+            .padding(.top, 6)
 
             // Simple bar chart showing current readings
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     ForEach(1...6, id: \.self) { cylinder in
                         compactCylinderBars(
                             cylinderNumber: cylinder,
@@ -165,9 +165,9 @@ struct TemperatureGraphOverlay: View {
                         )
                     }
                 }
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 10)
             }
-            .frame(height: size.height - 70) // Adjust based on header and legend
+            .frame(height: size.height - 60) // Adjust based on header and legend
         }
     }
 
@@ -229,7 +229,7 @@ struct TemperatureGraphOverlay: View {
     }
 
     private func compactBar(temperature: Double, color: Color, minScale: Double, maxScale: Double, width: CGFloat) -> some View {
-        let height: CGFloat = size.height - 100 // Available height for bars
+        let height: CGFloat = size.height - 90 // Available height for bars (reduced from 100)
         let normalized = (temperature - minScale) / (maxScale - minScale)
         let clamped = min(max(normalized, 0), 1)
         let barHeight = CGFloat(clamped) * height
