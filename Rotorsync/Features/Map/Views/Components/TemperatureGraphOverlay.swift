@@ -4,8 +4,9 @@ struct TemperatureGraphOverlay: View {
     @ObservedObject var temperatureService = TemperatureService.shared
     @Binding var size: CGSize
     @Binding var isVisible: Bool
-    @GestureState private var dragOffset = CGSize.zero
-    @State private var position: CGPoint = CGPoint(x: 200, y: 350) // Default position
+    @Binding var presetPosition: TemperatureGraphPosition
+    @State private var position: CGPoint = CGPoint(x: 150, y: 150)
+    @State private var isDragging = false
 
     private let minSize: CGSize = CGSize(width: 200, height: 120)
     private let maxSize: CGSize = CGSize(width: 400, height: 300)
@@ -86,6 +87,16 @@ struct TemperatureGraphOverlay: View {
                     )
             )
             .position(position)
+            .onChange(of: presetPosition) { newPosition in
+                // Animate to new preset position when user changes it in settings
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    position = newPosition.coordinates
+                }
+            }
+            .onAppear {
+                // Set initial position from preset
+                position = presetPosition.coordinates
+            }
         }
     }
 

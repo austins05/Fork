@@ -20,6 +20,7 @@ struct MapView: View {
     @State private var shareLocation: Bool = true
     @State private var showTemperatureGraph: Bool = false
     @State private var temperatureGraphSize: CGSize = CGSize(width: 250, height: 150)
+    @State private var temperatureGraphPosition: TemperatureGraphPosition = .topLeft
 
     @State private var droppedPins: [DroppedPinViewModel] = []
     @State private var groupPins: [APIPin] = []
@@ -185,7 +186,8 @@ struct MapView: View {
             // Temperature graph overlay (positioned below speed/altitude overlay)
             TemperatureGraphOverlay(
                 size: $temperatureGraphSize,
-                isVisible: $showTemperatureGraph
+                isVisible: $showTemperatureGraph,
+                presetPosition: $temperatureGraphPosition
             )
 
             bottomButtonsView()
@@ -377,9 +379,10 @@ struct MapView: View {
                 OverlaySettingsView(
                     overlayScale: $overlayScale,
                     shareLocation: $shareLocation,
-                    showTemperatureGraph: $showTemperatureGraph
+                    showTemperatureGraph: $showTemperatureGraph,
+                    temperatureGraphPosition: $temperatureGraphPosition
                 )
-                .presentationDetents([.fraction(0.4)])
+                .presentationDetents([.fraction(0.5)])
             }
 
             Button { showImport = true } label: {
