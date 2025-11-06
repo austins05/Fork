@@ -7,19 +7,50 @@ import SwiftUI
 
 struct MonitorView: View {
     @StateObject private var tempService = TemperatureService.shared
+    @Environment(\.colorScheme) var colorScheme
+
+    // Adaptive colors based on system appearance
+    var backgroundColor: LinearGradient {
+        colorScheme == .dark ?
+        LinearGradient(
+            gradient: Gradient(colors: [
+                Color(red: 0.05, green: 0.05, blue: 0.08),
+                Color(red: 0.08, green: 0.08, blue: 0.12)
+            ]),
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        ) :
+        LinearGradient(
+            gradient: Gradient(colors: [
+                Color(red: 0.95, green: 0.95, blue: 0.97),
+                Color(red: 0.92, green: 0.92, blue: 0.95)
+            ]),
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    var primaryTextColor: Color {
+        colorScheme == .dark ? .white : Color(red: 0.1, green: 0.1, blue: 0.15)
+    }
+
+    var secondaryTextColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.85) : Color(red: 0.2, green: 0.2, blue: 0.25)
+    }
+
+    var cardBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.03) : Color.white.opacity(0.7)
+    }
+
+    var borderColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.1)
+    }
 
     var body: some View {
         ZStack {
-            // Professional dark gradient background
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 0.05, green: 0.05, blue: 0.08),
-                    Color(red: 0.08, green: 0.08, blue: 0.12)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            // Adaptive background
+            backgroundColor
+                .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 // Professional header
@@ -61,7 +92,7 @@ struct MonitorView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("ENGINE MONITOR")
                     .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
+                    .foregroundColor(primaryTextColor)
                     .tracking(1.2)
 
                 HStack(spacing: 10) {
@@ -79,7 +110,7 @@ struct MonitorView: View {
 
                     Text(tempService.connectionStatus)
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.white.opacity(0.85))
+                        .foregroundColor(secondaryTextColor)
                 }
             }
 
@@ -97,12 +128,12 @@ struct MonitorView: View {
 
                         Text(timeAgo(from: lastUpdate))
                             .font(.system(size: 22, weight: .bold, design: .monospaced))
-                            .foregroundColor(timeAgo(from: lastUpdate) == "LIVE" ? Color.green : Color.white.opacity(0.6))
+                            .foregroundColor(timeAgo(from: lastUpdate) == "LIVE" ? Color.green : secondaryTextColor)
                     }
 
                     Text("DATA STREAM")
                         .font(.system(size: 10, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white.opacity(0.4))
+                        .foregroundColor(secondaryTextColor.opacity(0.7))
                         .tracking(1)
                 }
             }
@@ -110,7 +141,7 @@ struct MonitorView: View {
         .padding(.vertical, 16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.03))
+                .fill(cardBackgroundColor)
         )
     }
 
@@ -154,11 +185,11 @@ struct MonitorView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("ENGINE DATA")
                         .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
+                        .foregroundColor(primaryTextColor)
 
                     Text("CYLINDER HEAD & EXHAUST GAS TEMPERATURE")
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white.opacity(0.5))
+                        .foregroundColor(secondaryTextColor.opacity(0.7))
                         .tracking(1.5)
                 }
 
@@ -189,19 +220,12 @@ struct MonitorView: View {
         .padding(.vertical, 20)
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(Color.white.opacity(0.02))
+                .fill(cardBackgroundColor)
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .strokeBorder(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.white.opacity(0.2), Color.white.opacity(0.05)]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
+                        .strokeBorder(borderColor, lineWidth: 1)
                 )
-                .shadow(color: Color.white.opacity(0.08), radius: 20, x: 0, y: 10)
+                .shadow(color: borderColor.opacity(0.3), radius: 20, x: 0, y: 10)
         )
     }
 
@@ -211,7 +235,7 @@ struct MonitorView: View {
             // Animated connection icon
             ZStack {
                 Circle()
-                    .stroke(Color.white.opacity(0.1), lineWidth: 2)
+                    .stroke(borderColor, lineWidth: 2)
                     .frame(width: 120, height: 120)
 
                 Circle()
@@ -220,17 +244,17 @@ struct MonitorView: View {
 
                 Image(systemName: "antenna.radiowaves.left.and.right")
                     .font(.system(size: 50, weight: .light))
-                    .foregroundColor(.white.opacity(0.4))
+                    .foregroundColor(secondaryTextColor.opacity(0.6))
             }
 
             VStack(spacing: 12) {
                 Text("Awaiting Connection")
                     .font(.system(size: 28, weight: .semibold, design: .rounded))
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundColor(primaryTextColor.opacity(0.8))
 
                 Text(tempService.connectionStatus)
                     .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.white.opacity(0.5))
+                    .foregroundColor(secondaryTextColor.opacity(0.7))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
             }
@@ -258,16 +282,21 @@ struct StatCard: View {
     let unit: String
     let color: Color
     let threshold: Double
+    @Environment(\.colorScheme) var colorScheme
 
     var isOverThreshold: Bool {
         value > threshold
+    }
+
+    var textColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.5) : Color.black.opacity(0.6)
     }
 
     var body: some View {
         VStack(spacing: 12) {
             Text(title)
                 .font(.system(size: 10, weight: .bold, design: .rounded))
-                .foregroundColor(.white.opacity(0.5))
+                .foregroundColor(textColor)
                 .tracking(1.2)
 
             HStack(alignment: .firstTextBaseline, spacing: 2) {
@@ -278,7 +307,7 @@ struct StatCard: View {
                 if !unit.isEmpty {
                     Text(unit)
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.white.opacity(0.5))
+                        .foregroundColor(textColor)
                 }
             }
         }
@@ -286,10 +315,10 @@ struct StatCard: View {
         .padding(.vertical, 20)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(color.opacity(0.08))
+                .fill(color.opacity(colorScheme == .dark ? 0.08 : 0.12))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder(color.opacity(0.2), lineWidth: 1)
+                        .strokeBorder(color.opacity(colorScheme == .dark ? 0.2 : 0.3), lineWidth: 1)
                 )
         )
     }
@@ -305,20 +334,33 @@ struct ProfessionalBarPair: View {
     let warningThreshold: Double
     let minScale: Double
     let maxScale: Double
+    @Environment(\.colorScheme) var colorScheme
+
+    var labelTextColor: Color {
+        colorScheme == .dark ? .white : Color(red: 0.1, green: 0.1, blue: 0.15)
+    }
+
+    var labelBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.05) : Color.white.opacity(0.6)
+    }
+
+    var labelBorderColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.15)
+    }
 
     var body: some View {
         VStack(spacing: 10) {
             // Cylinder label at top
             Text("\(cylinderNumber)")
                 .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
+                .foregroundColor(labelTextColor)
                 .frame(width: 70, height: 32)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.white.opacity(0.05))
+                        .fill(labelBackgroundColor)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
+                                .strokeBorder(labelBorderColor, lineWidth: 1)
                         )
                 )
 
@@ -362,6 +404,7 @@ struct ProfessionalSingleBar: View {
     let warningThreshold: Double
     let minScale: Double
     let maxScale: Double
+    @Environment(\.colorScheme) var colorScheme
 
     var temperature: Double {
         reading?.temperature ?? 0
@@ -377,6 +420,22 @@ struct ProfessionalSingleBar: View {
         }
     }
 
+    var noDataColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.2) : Color.black.opacity(0.3)
+    }
+
+    var barBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.03) : Color.black.opacity(0.05)
+    }
+
+    var barBorderColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.1)
+    }
+
+    var labelColor: Color {
+        colorScheme == .dark ? Color.white.opacity(isPrimary ? 0.7 : 0.4) : Color.black.opacity(isPrimary ? 0.7 : 0.4)
+    }
+
     var body: some View {
         VStack(spacing: 8) {
             // Temperature value
@@ -388,7 +447,7 @@ struct ProfessionalSingleBar: View {
             } else {
                 Text("---")
                     .font(.system(size: 14, weight: .bold, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.2))
+                    .foregroundColor(noDataColor)
                     .frame(height: 24)
             }
 
@@ -396,20 +455,11 @@ struct ProfessionalSingleBar: View {
             ZStack(alignment: .bottom) {
                 // Background
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color.white.opacity(0.03),
-                                Color.white.opacity(0.01)
-                            ]),
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
+                    .fill(barBackgroundColor)
                     .frame(width: isPrimary ? 34 : 26, height: 260)
                     .overlay(
                         RoundedRectangle(cornerRadius: 4)
-                            .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
+                            .strokeBorder(barBorderColor, lineWidth: 1)
                     )
 
                 // Temperature fill
@@ -438,7 +488,7 @@ struct ProfessionalSingleBar: View {
             // Label at bottom
             Text(label)
                 .font(.system(size: isPrimary ? 12 : 10, weight: .bold, design: .rounded))
-                .foregroundColor(.white.opacity(isPrimary ? 0.7 : 0.4))
+                .foregroundColor(labelColor)
                 .frame(height: 20)
         }
     }
