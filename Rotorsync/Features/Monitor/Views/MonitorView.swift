@@ -455,7 +455,7 @@ struct ProfessionalBarPair: View {
                     color: Color(red: 0.2, green: 0.8, blue: 0.3),
                     isPrimary: primaryType == "CHT",
                     dangerThreshold: 500,
-                    warningThreshold: 420,
+                    warningThreshold: 480,
                     minScale: 250,
                     maxScale: 500
                 )
