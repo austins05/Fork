@@ -11,7 +11,7 @@ enum TemperatureGraphPosition: String, CaseIterable {
         case .topLeft:
             return CGPoint(x: 150, y: 220)
         case .topRight:
-            return CGPoint(x: 650, y: 150)
+            return CGPoint(x: 650, y: 220)
         case .bottomLeft:
             return CGPoint(x: 150, y: 650)
         case .bottomRight:

@@ -45,10 +45,14 @@ struct TemperatureGraphOverlay: View {
                 .gesture(
                     DragGesture()
                         .onChanged { value in
-                            position = CGPoint(
-                                x: position.x + value.translation.width,
-                                y: position.y + value.translation.height
-                            )
+                            let newX = position.x + value.translation.width
+                            let newY = position.y + value.translation.height
+
+                            // Constrain position to keep graph away from edges
+                            let minY: CGFloat = 100  // Keep away from status bar at top
+                            let constrainedY = max(minY, newY)
+
+                            position = CGPoint(x: newX, y: constrainedY)
                         }
                 )
 
