@@ -454,7 +454,7 @@ struct ProfessionalBarPair: View {
                     label: "C",
                     color: Color(red: 0.2, green: 0.8, blue: 0.3),
                     isPrimary: primaryType == "CHT",
-                    dangerThreshold: 450,
+                    dangerThreshold: 500,
                     warningThreshold: 420,
                     minScale: 250,
                     maxScale: 500
@@ -541,6 +541,17 @@ struct ProfessionalSingleBar: View {
                         RoundedRectangle(cornerRadius: 4)
                             .strokeBorder(barBorderColor, lineWidth: 1)
                     )
+
+                // Red danger threshold line
+                VStack {
+                    Spacer()
+                    Rectangle()
+                        .fill(Color.red)
+                        .frame(width: isPrimary ? 34 : 26, height: 2)
+                    Spacer()
+                        .frame(height: barHeight(for: dangerThreshold) - 1)
+                }
+                .frame(height: 260)
 
                 // Temperature fill
                 if let reading = reading {
