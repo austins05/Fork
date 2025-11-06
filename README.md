@@ -5,11 +5,32 @@ Agricultural aviation iPad application with real-time engine monitoring via USB.
 ## Features
 
 ### PeerTalk USB Engine Monitoring
-- **Garmin G1000 style display** with alternating CHT/EGT vertical bar graphs
-- Real-time temperature updates from Raspberry Pi via USB
-- 12 temperature sensors (6 CHT + 6 EGT cylinders)
-- Color-coded warning zones (normal/warning/danger)
-- Live statistics: Max CHT, Max EGT, Average temps
+- **Professional engine display** with vertical CHT/EGT bar graphs for all 6 cylinders
+- **Real-time temperature updates** from Raspberry Pi via USB
+- **Adaptive theming** - Light mode by default, dark mode when system is in dark mode
+- **Color-coded warning zones** with smooth gradients:
+  - CHT: Green (normal) → Amber (480-499°F) → Red (≥500°F)
+  - EGT: Blue (normal) → Amber (1650-1679°F) → Red (≥1680°F)
+- **Visual threshold indicators** - Red lines on bars at danger thresholds
+- **Temperature difference monitoring**:
+  - EGT MAX DIFF turns red when ≥100°F difference between cylinders
+  - CHT MAX DIFF turns red when ≥70°F difference between cylinders
+- **Map overlay** - Draggable, resizable temperature graph on map view
+- **Live statistics**: Max CHT, Max EGT, cylinder count
+
+### Temperature Display Features
+- **Layout**: EGT value (top, blue) → Cylinder number → Side-by-side bars → CHT value (bottom, green)
+- **Full-range scaling**: CHT 0-550°F, EGT 0-1800°F
+- **Connection status**: Minimized banner when disconnected, data remains visible at 60% opacity
+- **12 temperature sensors**: 6 CHT + 6 EGT cylinders
+- **Horizontal scrolling** for comfortable viewing of all cylinders
+
+### Map Temperature Overlay
+- **Positioning**: Four preset corners (Top Left, Top Right, Bottom Left, Bottom Right)
+- **Resizable**: Slider control (0.7x - 1.5x scale)
+- **Draggable**: Move anywhere on screen via header
+- **Toggleable**: On/off control in map settings
+- **Status indicator**: Green dot when connected, orange when searching
 
 ### Field Management
 - Import and display field maps from Tabula API
@@ -30,6 +51,7 @@ Agricultural aviation iPad application with real-time engine monitoring via USB.
 ### iOS App (Swift/SwiftUI)
 - **PeerTalk Integration**: USB communication with Raspberry Pi
 - **Combine Framework**: Reactive data flow
+- **SwiftUI Environment**: Adaptive color schemes
 - **Core Data**: Local persistence
 - **MQTT**: Real-time sync
 - **MapKit**: Field and pin visualization
@@ -47,11 +69,32 @@ Agricultural aviation iPad application with real-time engine monitoring via USB.
 ## PeerTalk Engine Monitor
 
 ### Display Layout
-The monitor displays alternating CHT and EGT bars for each cylinder in a horizontal scrollable view, with real-time updates.
+The monitor displays all 6 cylinders in a horizontal scrollable view with:
+- **EGT temperature** (blue number at top)
+- **Cylinder number** (centered in labeled box)
+- **Dual bars** (CHT green on left, EGT blue on right)
+- **CHT temperature** (green number at bottom)
 
-### Temperature Thresholds
-- **CHT**: 450°F danger, 420°F warning (250-500°F scale)
-- **EGT**: 1650°F danger, 1550°F warning (1200-1700°F scale)
+### Temperature Thresholds & Scaling
+
+#### CHT (Cylinder Head Temperature)
+- **Scale**: 0-550°F (full range)
+- **Warning**: 480°F (amber color)
+- **Danger**: 500°F (red color + red threshold line)
+- **MAX DIFF Alert**: Red indicator when cylinder spread ≥70°F
+
+#### EGT (Exhaust Gas Temperature)
+- **Scale**: 0-1800°F (full range)
+- **Warning**: 1650°F (amber color)
+- **Danger**: 1680°F (red color + red threshold line)
+- **MAX DIFF Alert**: Red indicator when cylinder spread ≥100°F
+
+### Visual Warning System
+1. **Normal Operation**: Bars display in their base color (CHT green, EGT blue)
+2. **Warning Zone**: Bars turn amber when approaching limits
+3. **Danger Zone**: Bars turn red when exceeding thresholds
+4. **Red Lines**: Horizontal indicator at danger threshold on each bar
+5. **MAX DIFF**: White text on red background when cylinder spread exceeds limits
 
 ### PeerTalk Protocol
 - **Frame Format**: version (UInt32), type (UInt32), tag (UInt32), payloadSize (UInt32)
@@ -139,22 +182,26 @@ Rotorsync/
 ├── Features/
 │   ├── Monitor/
 │   │   └── Views/
-│   │       └── MonitorView.swift       # Garmin G1000 style display
-│   ├── Map/                             # Field maps & pins
-│   ├── FileManager/                     # File/folder management
-│   └── Groups/                          # Collaboration
+│   │       └── MonitorView.swift            # Professional engine display
+│   ├── Map/
+│   │   └── Views/
+│   │       └── Components/
+│   │           ├── TemperatureGraphOverlay.swift  # Map overlay
+│   │           └── OverlaySettingsView.swift      # Overlay controls
+│   ├── FileManager/                          # File/folder management
+│   └── Groups/                               # Collaboration
 ├── Services/
-│   └── TemperatureService.swift         # PeerTalk integration
-├── PeerTalk/                            # USB communication framework
+│   └── TemperatureService.swift              # PeerTalk integration
+├── PeerTalk/                                 # USB communication framework
 │   ├── PTChannel.m
 │   ├── PTProtocol.m
 │   └── PTUSBHub.m
-├── Terralink/                           # Tabula field maps
+├── Terralink/                                # Tabula field maps
 ├── Core/
-│   ├── Database/                        # Core Data
-│   ├── Networking/                      # API & MQTT
-│   └── Managers/                        # Location, etc.
-└── Models/                              # Data models
+│   ├── Database/                             # Core Data
+│   ├── Networking/                           # API & MQTT
+│   └── Managers/                             # Location, etc.
+└── Models/                                   # Data models
 ```
 
 ## Temperature Monitor Technical Details
@@ -164,12 +211,24 @@ Rotorsync/
 - Listens on port 2345 for incoming frames
 - Decodes JSON temperature payload
 - Publishes data via `@Published` properties
+- Connection status monitoring
 
 ### MonitorView.swift
-- Garmin G1000 inspired UI
-- Alternating CHT/EGT bars for each cylinder
+- Professional engine monitor UI
+- Adaptive light/dark theming via `@Environment(\.colorScheme)`
+- EGT/CHT layout: number (top) → bars → number (bottom)
 - SwiftUI + Combine for reactive updates
 - Color-coded zones with gradient fills
+- Red threshold lines at danger levels
+- MAX DIFF indicators with conditional red highlighting
+
+### TemperatureGraphOverlay.swift
+- Compact temperature display for map view
+- Draggable via header gesture
+- Resizable via bottom-right handle
+- Four position presets with smooth animations
+- Size slider (0.7x to 1.5x)
+- Same color scheme and scaling as main monitor
 
 ### Python Daemon (Raspberry Pi)
 ```python
@@ -189,6 +248,25 @@ frame_header = struct.pack('>IIII',
 }
 ```
 
+## Temperature Monitoring Best Practices
+
+### Normal Operation
+- CHT: 350-420°F typical cruise
+- EGT: 1350-1550°F typical cruise
+- MAX DIFF: <50°F for CHT, <75°F for EGT
+
+### Warning Conditions
+- **Amber Alert**: CHT 480-499°F or EGT 1650-1679°F
+- **Action**: Reduce power, increase cooling
+
+### Danger Conditions
+- **Red Alert**: CHT ≥500°F or EGT ≥1680°F
+- **Action**: Immediate power reduction, prepare for landing
+
+### Cylinder Imbalance
+- **CHT spread ≥70°F**: Possible cooling issue, fouled plug, or mixture imbalance
+- **EGT spread ≥100°F**: Possible induction leak, fuel flow issue, or ignition problem
+
 ## Contributing
 
 1. Fork the repository
@@ -204,6 +282,19 @@ Proprietary - All Rights Reserved
 ## Support
 
 For issues or questions, please open a GitHub issue.
+
+## Changelog
+
+### Latest Updates
+- ✅ Adaptive light/dark theme support
+- ✅ Temperature graph map overlay with drag/resize
+- ✅ Updated temperature thresholds (CHT: 480/500°F, EGT: 1650/1680°F)
+- ✅ Full-range temperature scaling (CHT: 0-550°F, EGT: 0-1800°F)
+- ✅ Red threshold lines on temperature bars
+- ✅ MAX DIFF indicators with alert thresholds
+- ✅ Color scheme update (EGT blue, CHT green)
+- ✅ Minimized connection error display
+- ✅ Professional layout with numbers top and bottom
 
 ---
 
