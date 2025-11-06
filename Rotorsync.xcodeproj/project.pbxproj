@@ -10,25 +10,10 @@
 		D72C5A2B2EA801100006F78B /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = D72C5A2A2EA801100006F78B /* ZIPFoundation */; };
 		D74003D62EB15D3900B6A85C /* CocoaMQTT in Frameworks */ = {isa = PBXBuildFile; productRef = D74003D52EB15D3900B6A85C /* CocoaMQTT */; };
 		D74003D82EB15D3900B6A85C /* CocoaMQTTWebSocket in Frameworks */ = {isa = PBXBuildFile; productRef = D74003D72EB15D3900B6A85C /* CocoaMQTTWebSocket */; };
-		447312AC09FE43F0A7BE59A4 /* PTChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 9BD0D7EA16EA46E7BF206B52 /* PTChannel.m */; };
-		8934F4C3B506467B96CFDF3B /* PTProtocol.m in Sources */ = {isa = PBXBuildFile; fileRef = 8781CC592D0F41BC83F9DAAC /* PTProtocol.m */; };
-		DBD7BC0E2C584A7A8C313D87 /* PTUSBHub.m in Sources */ = {isa = PBXBuildFile; fileRef = 55EA2BEFF41348D8925F566A /* PTUSBHub.m */; };
-		B3C94463D1684410823F652E /* TemperatureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120CDB20185E471F81148D1D /* TemperatureService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		D76AB8502E9FF4BB00374884 /* Rotorsync.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Rotorsync.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		9BD0D7EA16EA46E7BF206B52 /* PTChannel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "PTChannel.m"; sourceTree = "<group>"; };
-		89397352614445CCA5B83B75 /* PTChannel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "PTChannel.h"; sourceTree = "<group>"; };
-		8781CC592D0F41BC83F9DAAC /* PTProtocol.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "PTProtocol.m"; sourceTree = "<group>"; };
-		F75F6427BAFF4142B21B3A9F /* PTProtocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "PTProtocol.h"; sourceTree = "<group>"; };
-		55EA2BEFF41348D8925F566A /* PTUSBHub.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "PTUSBHub.m"; sourceTree = "<group>"; };
-		10E27009794444C58FCDEAD5 /* PTUSBHub.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "PTUSBHub.h"; sourceTree = "<group>"; };
-		71782F1986EA4F0688C653DB /* Peertalk.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Peertalk.h"; sourceTree = "<group>"; };
-		0A03ECF209B341C6B06563A9 /* PTDefines.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "PTDefines.h"; sourceTree = "<group>"; };
-		50925EA9CCFF4B289FD039B5 /* PTPrivate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "PTPrivate.h"; sourceTree = "<group>"; };
-		120CDB20185E471F81148D1D /* TemperatureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TemperatureService.swift"; sourceTree = "<group>"; };
-		D8F937051D3F4BFABC433980 /* Rotorsync-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Rotorsync-Bridging-Header.h"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
