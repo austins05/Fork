@@ -6,7 +6,7 @@ struct TemperatureGraphOverlay: View {
     @Binding var isVisible: Bool
     @Binding var presetPosition: TemperatureGraphPosition
     @Binding var graphScale: CGFloat
-    @State private var position: CGPoint = CGPoint(x: 150, y: 150)
+    @State private var position: CGPoint = CGPoint(x: 150, y: 220)
     @State private var isDragging = false
 
     private let baseSize: CGSize = CGSize(width: 250, height: 150)
