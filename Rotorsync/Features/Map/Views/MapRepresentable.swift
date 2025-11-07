@@ -363,6 +363,38 @@ struct MapRepresentable: UIViewRepresentable {
                 return view
             }
 
+            // Handle imported field pins - use field color
+            if let subtitle = annotation.subtitle as? String, subtitle.starts(with: "field_"),
+               let fieldIdStr = subtitle.split(separator: "_").last,
+               let fieldId = Int(fieldIdStr) {
+                let id = "fieldPin"
+                var view = mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView
+                if view == nil {
+                    view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: id)
+                    view?.canShowCallout = true
+                } else {
+                    view?.annotation = annotation
+                }
+                
+                // Find field by ID and use its color
+                if let field = parent.importedFields.first(where: { $0.id == fieldId }) {
+                    if field.color.isEmpty {
+                        // Empty color -> use zebra stripe pattern!
+                        view?.markerTintColor = MapRepresentable.createZebraStripePattern()
+                        view?.glyphImage = UIImage(systemName: "map.fill")
+                    } else {
+                        let fieldColor = Color(hex: field.color)
+                        view?.markerTintColor = UIColor(fieldColor)
+                        view?.glyphImage = UIImage(systemName: "map.fill")
+                    }
+                } else {
+                    // Fallback if field not found
+                    view?.markerTintColor = .systemGray
+                }
+                
+                return view
+            }
+
             // Handle devices
             if annotation.subtitle == "device" {
                 let id = "device"
