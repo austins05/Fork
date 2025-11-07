@@ -173,6 +173,29 @@ struct MapView: View {
                     setCameraPosition(.region(region), animated: true)
                 }
             }
+            .onReceive(SharedFieldStorage.shared.$shouldImportToMap) { shouldImport in
+                if shouldImport {
+                    print("📍 Importing fields from SharedFieldStorage")
+                    print("📍 Pending fields count: (SharedFieldStorage.shared.pendingFieldsToImport.count)")
+                    print("📍 Current importedFields count BEFORE: (importedFields.count)")
+                    importedFields.append(contentsOf: SharedFieldStorage.shared.pendingFieldsToImport)
+                    SharedFieldStorage.shared.clearPendingFields()
+                    print("📍 Current importedFields count AFTER: (importedFields.count)")
+                    print("📍 Imported field IDs: (importedFields.map { $0.id })")
+                    updateMapRegion(animated: true)
+
+                    let count = importedFields.count
+                    showAlert(title: "Fields Imported", message: "Added \(count) fields from Tabula to map")
+                }
+            }
+            .onReceive(SharedFieldStorage.shared.$shouldClearAllFields) { shouldClear in
+                if shouldClear {
+                    let count = importedFields.count
+                    importedFields.removeAll()
+                    SharedFieldStorage.shared.shouldClearAllFields = false
+                    showAlert(title: "Fields Cleared", message: "Removed \(count) field\(count == 1 ? "" : "s") from map")
+                }
+            }
             .id(refreshTrigger)
             
             CrosshairOverlay(

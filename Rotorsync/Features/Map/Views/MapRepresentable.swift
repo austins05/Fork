@@ -40,6 +40,8 @@ struct MapRepresentable: UIViewRepresentable {
 
     func updateUIView(_ uiView: MKMapView, context: Context) {
         uiView.mapType = mapStyle.mapType
+        // IMPORTANT: Update parent reference so coordinator has latest bindings
+        context.coordinator.parent = self
         
         // Update tracking mode
         if uiView.userTrackingMode != userTrackingMode {
@@ -86,6 +88,36 @@ struct MapRepresentable: UIViewRepresentable {
     }
     
     func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    
+    // Helper function to create zebra stripe pattern
+    private static func createZebraStripePattern() -> UIColor {
+        let size = CGSize(width: 20, height: 20)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        
+        let image = renderer.image { context in
+            // Black background
+            UIColor.black.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+            
+            // Yellow diagonal stripes
+            UIColor.yellow.setFill()
+            let path = UIBezierPath()
+            
+            // Create diagonal stripes
+            for i in stride(from: -20, through: 40, by: 8) {
+                path.move(to: CGPoint(x: CGFloat(i), y: 0))
+                path.addLine(to: CGPoint(x: CGFloat(i + 4), y: 0))
+                path.addLine(to: CGPoint(x: CGFloat(i + 24), y: 20))
+                path.addLine(to: CGPoint(x: CGFloat(i + 20), y: 20))
+                path.close()
+            }
+            
+            path.fill()
+        }
+        
+        return UIColor(patternImage: image)
+    }
 
     class Coordinator: NSObject, MKMapViewDelegate {
         var parent: MapRepresentable
@@ -188,10 +220,46 @@ struct MapRepresentable: UIViewRepresentable {
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
             if let poly = overlay as? MKPolygon {
                 let r = MKPolygonRenderer(polygon: poly)
-                let field = parent.importedFields.first { $0.name == poly.title ?? "" }
-                let col = field.map { Color(hex: $0.color) } ?? Color.red
-                r.fillColor = UIColor(col).withAlphaComponent(0.4)
-                r.strokeColor = UIColor(col)
+                
+                print("🎨 Rendering polygon: \(poly.title ?? "unknown")")
+                print("🎨 Polygon subtitle: \(poly.subtitle ?? "none")")
+                
+                // Extract field ID from subtitle (format: "field_123")
+                if let subtitle = poly.subtitle,
+                   subtitle.starts(with: "field_"),
+                   let fieldIdStr = subtitle.split(separator: "_").last,
+                   let fieldId = Int(fieldIdStr) {
+                    print("🎨 Looking for field ID: \(fieldId)")
+                    
+                    // Find field by ID
+                    if let field = parent.importedFields.first(where: { $0.id == fieldId }) {
+                        print("🎨 Found field: \(field.name), color: \(field.color)")
+                        // Check for empty color -> use zebra stripes
+                        if field.color.isEmpty {
+                            print("🎨 🦓 Using ZEBRA STRIPES (no color set)")
+                            r.fillColor = MapRepresentable.createZebraStripePattern().withAlphaComponent(0.7)
+                            r.strokeColor = UIColor.black
+                            r.lineWidth = 3
+                            return r
+                        }
+                        
+                        let col = Color(hex: field.color)
+                        r.fillColor = UIColor(col).withAlphaComponent(0.4)
+                        r.strokeColor = UIColor(col)
+                        r.lineWidth = 3
+                        return r
+                    } else {
+                        print("🎨 ❌ Field not found in importedFields")
+                        print("🎨 Available field IDs: \(parent.importedFields.map { $0.id })")
+                    }
+                } else {
+                    print("🎨 ❌ Could not parse field ID from subtitle")
+                }
+                
+                // Fallback to red if field not found
+                print("🎨 ⚠️ Defaulting to RED")
+                r.fillColor = UIColor.red.withAlphaComponent(0.4)
+                r.strokeColor = UIColor.red
                 r.lineWidth = 3
                 return r
             } else if let line = overlay as? MKPolyline {
@@ -202,6 +270,7 @@ struct MapRepresentable: UIViewRepresentable {
             }
             return MKOverlayRenderer()
         }
+
         
         func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
             isUserInteracting = true

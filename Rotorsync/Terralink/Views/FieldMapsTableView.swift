@@ -5,13 +5,33 @@
 
 import SwiftUI
 import Combine
+import CoreLocation
 
 struct FieldMapsTableView: View {
     @StateObject private var viewModel = FieldMapsTableViewModel()
-    
+    @State private var selectedJobs: Set<Int> = []
+    @State private var hasLoadedData = false
+
+    // Filter states
+    @State private var customerFilter = ""
+    @State private var contractorFilter = ""
+    @State private var orderIdFilter = ""
+    @State private var rtsFilter = "All"
+    @State private var coverageAreaFilter = ""
+    @State private var statusFilter = ""
+    @State private var productFilter = ""
+    @State private var notesFilter = ""
+    @State private var applicationRateFilter = ""
+    @State private var mapAddressFilter = ""
+
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
+                // Selection toolbar
+                if !selectedJobs.isEmpty {
+                    selectionToolbar
+                }
+
                 if viewModel.isLoading {
                     ProgressView("Loading jobs...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -26,7 +46,17 @@ struct FieldMapsTableView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
+                        SharedFieldStorage.shared.clearAllFields()
+                    }) {
+                        Label("Clear All Fields", systemImage: "trash.fill")
+                            .foregroundColor(.red)
+                    }
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
                         Task {
+                            hasLoadedData = true // Keep flag true to prevent auto-reload
                             await viewModel.refreshData()
                         }
                     }) {
@@ -36,6 +66,8 @@ struct FieldMapsTableView: View {
                 }
             }
             .task {
+                guard !hasLoadedData else { return }
+                hasLoadedData = true
                 await viewModel.loadInitialData()
             }
             .alert("Error", isPresented: $viewModel.showError) {
@@ -46,64 +78,286 @@ struct FieldMapsTableView: View {
         }
         .navigationViewStyle(StackNavigationViewStyle())
     }
-    
+
+    private var selectionToolbar: some View {
+        HStack {
+            Text("\(selectedJobs.count) selected")
+                .font(.headline)
+
+            Spacer()
+
+            Button(action: {
+                Task {
+                    await importSelectedToMap()
+                }
+            }) {
+                HStack {
+                    Image(systemName: "map.fill")
+                    Text("Import to Map")
+                }
+                .font(.subheadline)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(8)
+            }
+            .disabled(viewModel.isLoading)
+
+            Button(action: {
+                // Select all
+                selectedJobs = Set(viewModel.fieldMaps.map { $0.id })
+            }) {
+                Text("Select All")
+                    .font(.subheadline)
+            }
+            .padding(.leading, 8)
+
+            Button(action: {
+                selectedJobs.removeAll()
+            }) {
+                Text("Clear")
+                    .font(.subheadline)
+            }
+            .padding(.leading, 8)
+        }
+        .padding()
+        .background(Color(.systemGray6))
+    }
+
+    func matchesAreaFilter(area: Double, filter: String) -> Bool {
+        let trimmed = filter.trimmingCharacters(in: .whitespaces)
+
+        // Handle range format: "2-3" or "2 - 3"
+        if trimmed.contains("-") {
+            let parts = trimmed.components(separatedBy: "-").map { $0.trimmingCharacters(in: .whitespaces) }
+            if parts.count == 2,
+               let min = Double(parts[0]),
+               let max = Double(parts[1]) {
+                return area >= min && area <= max
+            }
+        }
+
+        // Handle greater than: ">5"
+        if trimmed.hasPrefix(">") {
+            let numberPart = trimmed.dropFirst().trimmingCharacters(in: .whitespaces)
+            if let value = Double(numberPart) {
+                return area > value
+            }
+        }
+
+        // Handle less than: "<5"
+        if trimmed.hasPrefix("<") {
+            let numberPart = trimmed.dropFirst().trimmingCharacters(in: .whitespaces)
+            if let value = Double(numberPart) {
+                return area < value
+            }
+        }
+
+        // Handle exact match
+        if let value = Double(trimmed) {
+            return abs(area - value) < 0.01 // Allow small floating point differences
+        }
+
+        return false
+    }
+
+    var filteredFieldMaps: [TabulaJob] {
+        viewModel.fieldMaps.filter { fieldMap in
+            // Customer filter
+            if !customerFilter.isEmpty && !fieldMap.customer.localizedCaseInsensitiveContains(customerFilter) {
+                return false
+            }
+
+            // Contractor filter
+            if !contractorFilter.isEmpty && !fieldMap.customer.localizedCaseInsensitiveContains(contractorFilter) {
+                return false
+            }
+
+            // Order ID filter
+            if !orderIdFilter.isEmpty && !"\(fieldMap.id)".contains(orderIdFilter) {
+                return false
+            }
+
+            // RTS filter
+            if rtsFilter != "All" {
+                let isRTS = fieldMap.rts
+                if rtsFilter == "Yes" && !isRTS {
+                    return false
+                }
+                if rtsFilter == "No" && isRTS {
+                    return false
+                }
+            }
+
+            // Coverage area filter (supports ranges like "2-3", ">5", "<10")
+            if !coverageAreaFilter.isEmpty {
+                if !matchesAreaFilter(area: fieldMap.area, filter: coverageAreaFilter) {
+                    return false
+                }
+            }
+
+            // Status filter
+            if !statusFilter.isEmpty && !fieldMap.status.localizedCaseInsensitiveContains(statusFilter) {
+                return false
+            }
+
+            // Product filter
+            if !productFilter.isEmpty && !fieldMap.productList.localizedCaseInsensitiveContains(productFilter) {
+                return false
+            }
+
+            // Notes filter
+            if !notesFilter.isEmpty && !fieldMap.notes.localizedCaseInsensitiveContains(notesFilter) {
+                return false
+            }
+
+            // Map address filter
+            if !mapAddressFilter.isEmpty && !fieldMap.address.localizedCaseInsensitiveContains(mapAddressFilter) {
+                return false
+            }
+
+            return true
+        }
+    }
+
     private var tableView: some View {
         ScrollView([.horizontal, .vertical]) {
             VStack(alignment: .leading, spacing: 0) {
                 // Header Row
                 HStack(spacing: 0) {
-                    TableHeaderCell(title: "Order ID", width: 80)
+                    Text("")
+                        .frame(width: 50, alignment: .leading)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 12)
+                    Divider()
                     TableHeaderCell(title: "Customer Name", width: 180)
+                    Divider()
                     TableHeaderCell(title: "Contractor Name", width: 180)
-                    TableHeaderCell(title: "Rts Yes", width: 80)
+                    Divider()
+                    TableHeaderCell(title: "Order ID", width: 100)
+                    Divider()
+                    TableHeaderCell(title: "RTS", width: 80)
+                    Divider()
+                    TableHeaderCell(title: "Requested Coverage Area (ha)", width: 180)
+                    Divider()
                     TableHeaderCell(title: "Status", width: 120)
-                    TableHeaderCell(title: "Ordered Products", width: 250)
-                    TableHeaderCell(title: "Requested Coverage Area (ha)", width: 150)
-                    TableHeaderCell(title: "Nominal Area (ha)", width: 130)
-                    TableHeaderCell(title: "Real Area (ha)", width: 120)
-                    TableHeaderCell(title: "Deleted", width: 80)
+                    Divider()
+                    TableHeaderCell(title: "prod dupli", width: 250)
+                    Divider()
+                    TableHeaderCell(title: "Notes", width: 200)
+                    Divider()
+                    TableHeaderCell(title: "Application Rate GPA", width: 150)
+                    Divider()
+                    TableHeaderCell(title: "Map Address", width: 200)
                 }
                 .background(Color(.systemGray5))
-                
-                Divider()
-                
-                // Data Rows
-                ForEach(viewModel.fieldMaps) { fieldMap in
-                    HStack(spacing: 0) {
-                        TableCell(text: "\(fieldMap.id)", width: 80)
-                        TableCell(text: fieldMap.customer, width: 180)
-                        TableCell(text: fieldMap.customer, width: 180) // Contractor same as customer
-                        TableCell(text: fieldMap.rts ? "Yes" : "No", width: 80)
-                        TableCell(text: fieldMap.status.capitalized, width: 120, color: statusColor(for: fieldMap.status))
-                        TableCell(text: fieldMap.productList.isEmpty ? "-" : fieldMap.productList, width: 250)
-                        TableCell(text: String(format: "%.2f", fieldMap.area), width: 150, alignment: .trailing)
-                        TableCell(text: "0.00", width: 130, alignment: .trailing) // Nominal area placeholder
-                        TableCell(text: "0.00", width: 120, alignment: .trailing) // Real area placeholder
-                        TableCell(text: fieldMap.deleted ? "Yes" : "No", width: 80)
+
+                // Filter Row
+                HStack(spacing: 0) {
+                    Color.clear
+                        .frame(width: 50, alignment: .leading)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                    Divider()
+                    FilterTextField(text: $customerFilter, placeholder: "Filter this column...", width: 180)
+                    Divider()
+                    FilterTextField(text: $contractorFilter, placeholder: "Filter this column...", width: 180)
+                    Divider()
+                    FilterTextField(text: $orderIdFilter, placeholder: "Filter this column...", width: 100)
+                    Divider()
+
+                    // RTS Dropdown
+                    Picker("", selection: $rtsFilter) {
+                        Text("All").tag("All")
+                        Text("Yes").tag("Yes")
+                        Text("No").tag("No")
                     }
-                    .background(Color(.systemBackground))
-                    
+                    .pickerStyle(MenuPickerStyle())
+                    .frame(width: 80, alignment: .leading)
+                    .padding(.horizontal, 8)
+                    Divider()
+
+                    // Coverage Area Filter (supports: "2-3", ">5", "<10", or exact number)
+                    FilterTextField(text: $coverageAreaFilter, placeholder: "e.g. 2-3, >5, <10", width: 180)
+                    Divider()
+
+                    FilterTextField(text: $statusFilter, placeholder: "Filter this column...", width: 120)
+                    Divider()
+                    FilterTextField(text: $productFilter, placeholder: "Filter this column...", width: 250)
+                    Divider()
+                    FilterTextField(text: $notesFilter, placeholder: "Filter this column...", width: 200)
+                    Divider()
+                    FilterTextField(text: $applicationRateFilter, placeholder: "Filter this column...", width: 150)
+                    Divider()
+                    FilterTextField(text: $mapAddressFilter, placeholder: "Filter this column...", width: 200)
+                }
+                .background(Color(.systemGray6))
+
+                Divider()
+
+                // Data Rows
+                ForEach(filteredFieldMaps) { fieldMap in
+                    HStack(spacing: 0) {
+                        Button(action: {
+                            if selectedJobs.contains(fieldMap.id) {
+                                selectedJobs.remove(fieldMap.id)
+                            } else {
+                                selectedJobs.insert(fieldMap.id)
+                            }
+                        }) {
+                            Image(systemName: selectedJobs.contains(fieldMap.id) ? "checkmark.circle.fill" : "circle")
+                                .foregroundColor(selectedJobs.contains(fieldMap.id) ? .blue : .gray)
+                                .font(.system(size: 20))
+                                .frame(width: 50)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 10)
+                        }
+                        Divider()
+
+                        TableCell(text: fieldMap.customer, width: 180)
+                        Divider()
+                        TableCell(text: fieldMap.customer, width: 180) // Contractor same as customer
+                        Divider()
+                        TableCell(text: "\(fieldMap.id)", width: 100)
+                        Divider()
+                        TableCell(text: fieldMap.rts ? "Yes" : "No", width: 80, color: fieldMap.rts ? .green : .gray)
+                        Divider()
+                        TableCell(text: String(format: "%.2f", fieldMap.area), width: 180, alignment: .trailing)
+                        Divider()
+                        TableCell(text: fieldMap.status.capitalized, width: 120, color: statusColor(for: fieldMap.status))
+                        Divider()
+                        TableCell(text: fieldMap.prodDupli ?? "-", width: 250)
+                        Divider()
+                        TableCell(text: fieldMap.notes.isEmpty ? "-" : fieldMap.notes, width: 200)
+                        Divider()
+                        TableCell(text: "-", width: 150) // Application rate placeholder
+                        Divider()
+                        TableCell(text: fieldMap.address.isEmpty ? "-" : fieldMap.address, width: 200)
+                    }
+                    .background(selectedJobs.contains(fieldMap.id) ? Color.blue.opacity(0.1) : Color(.systemBackground))
+
                     Divider()
                 }
             }
         }
     }
-    
+
     private var emptyStateView: some View {
         VStack(spacing: 16) {
             Image(systemName: "tablecells")
                 .font(.system(size: 60))
                 .foregroundColor(.gray)
-            
+
             Text("No Field Maps")
                 .font(.title2)
                 .fontWeight(.semibold)
-            
+
             Text("Field maps will appear here when available")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
-            
+
             Button(action: {
                 Task {
                     await viewModel.refreshData()
@@ -120,7 +374,7 @@ struct FieldMapsTableView: View {
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     private func statusColor(for status: String) -> Color {
         switch status.lowercased() {
         case "complete": return .green
@@ -130,6 +384,163 @@ struct FieldMapsTableView: View {
         default: return .primary
         }
     }
+
+    func importSelectedToMap() async {
+        guard !selectedJobs.isEmpty else { return }
+
+        viewModel.isLoading = true
+        defer { viewModel.isLoading = false }
+
+        do {
+            var fields: [FieldData] = []
+            var errors: [String] = []
+
+            for jobId in selectedJobs {
+                guard let job = viewModel.fieldMaps.first(where: { $0.id == jobId }) else {
+                    errors.append("Job \(jobId) not found")
+                    continue
+                }
+
+                // Fetch geometry from backend
+                let url = URL(string: "http://192.168.68.226:3000/api/field-maps/\(jobId)/geometry?type=requested")!
+                let (data, response) = try await URLSession.shared.data(from: url)
+
+                // Check HTTP status
+                if let httpResponse = response as? HTTPURLResponse {
+                    print("📡 Job \(jobId) response: \(httpResponse.statusCode)")
+                    if httpResponse.statusCode != 200 {
+                        if let errorMsg = String(data: data, encoding: .utf8) {
+                            print("❌ Error response: \(errorMsg)")
+                            errors.append("Job \(jobId): HTTP \(httpResponse.statusCode)")
+                        }
+                        continue
+                    }
+                }
+
+                // Debug: Print raw response
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("📦 Raw response for job \(jobId): \(jsonString.prefix(200))...")
+                }
+
+                // Parse GeoJSON - API returns: {success, data: {features: [{geometry, properties}]}}
+                guard let response = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                    errors.append("Job \(jobId): Invalid JSON")
+                    print("❌ Failed to parse JSON for job \(jobId)")
+                    continue
+                }
+
+                guard let responseData = response["data"] as? [String: Any] else {
+                    errors.append("Job \(jobId): Missing data field")
+                    print("❌ No 'data' field in response for job \(jobId)")
+                    continue
+                }
+
+                guard let features = responseData["features"] as? [[String: Any]], !features.isEmpty else {
+                    errors.append("Job \(jobId): No features found")
+                    print("❌ No features in data for job \(jobId)")
+                    continue
+                }
+
+                guard let firstFeature = features.first,
+                      let geometry = firstFeature["geometry"] as? [String: Any] else {
+                    errors.append("Job \(jobId): Invalid feature geometry")
+                    print("❌ Invalid geometry for job \(jobId)")
+                    continue
+                }
+
+                guard let coordinates = parseGeoJSONCoordinates(geometry) else {
+                    errors.append("Job \(jobId): Failed to parse coordinates")
+                    print("❌ Failed to parse coordinates for job \(jobId)")
+                    continue
+                }
+                // Use Color custom field from Tabula API and convert to hex
+                let colorName = job.color ?? ""
+                var color = "" // Empty = zebra stripes fallback
+                
+                // Convert color name to hex
+                let colorMap: [String: String] = [
+                    "red": "#FF0000",
+                    "orange": "#FF8C00",
+                    "yellow": "#FFFF00",
+                    "green": "#00FF00",
+                    "teal": "#00FFFF",
+                    "blue": "#0000FF",
+                    "purple": "#9966FF",
+                    "pink": "#FF69B4",
+                    "gray": "#808080",
+                    "grey": "#808080"
+                ]
+                
+                let name = colorName.lowercased().trimmingCharacters(in: CharacterSet.whitespaces)
+                if name.hasPrefix("#") {
+                    color = colorName
+                } else if let hexColor = colorMap[name] {
+                    color = hexColor
+                }
+                
+                print("🎨 Import: Job \(job.id) (\(job.name)) - colorName: '\(colorName)' -> hex: '\(color)'")
+
+                let fieldData = FieldData(
+                    id: job.id,
+                    name: job.name,
+                    coordinates: coordinates,
+                    acres: job.area * 2.47105, // Convert hectares to acres
+                    color: color,
+                    category: job.status,
+                    application: job.productList,
+                    description: job.notes,
+                    source: .tabula
+                )
+                fields.append(fieldData)
+                print("✅ Successfully parsed job \(jobId)")
+            }
+
+            // Import to map using shared storage
+            await MainActor.run {
+                if fields.isEmpty {
+                    viewModel.errorMessage = "Failed to import any fields. Errors: \(errors.joined(separator: ", "))"
+                    viewModel.showError = true
+                } else {
+                    SharedFieldStorage.shared.addFieldsForImport(fields)
+                    print("✅ Successfully imported \(fields.count) field(s) to Map tab")
+                    // Clear selection after successful import
+                    selectedJobs.removeAll()
+                }
+            }
+
+        } catch {
+            await MainActor.run {
+                viewModel.errorMessage = "Failed to import: \(error.localizedDescription)"
+                viewModel.showError = true
+            }
+        }
+    }
+
+    func parseGeoJSONCoordinates(_ geometry: [String: Any]) -> [CLLocationCoordinate2D]? {
+        guard let type = geometry["type"] as? String else { return nil }
+
+        if type == "Polygon" {
+            guard let coords = geometry["coordinates"] as? [[[Double]]] else { return nil }
+            // First ring is outer boundary
+            if let ring = coords.first {
+                return ring.compactMap { coord in
+                    guard coord.count >= 2 else { return nil }
+                    return CLLocationCoordinate2D(latitude: coord[1], longitude: coord[0])
+                }
+            }
+        } else if type == "MultiPolygon" {
+            guard let coords = geometry["coordinates"] as? [[[[Double]]]] else { return nil }
+            // Take first polygon's first ring
+            if let polygon = coords.first, let ring = polygon.first {
+                return ring.compactMap { coord in
+                    guard coord.count >= 2 else { return nil }
+                    return CLLocationCoordinate2D(latitude: coord[1], longitude: coord[0])
+                }
+            }
+        }
+
+        return nil
+    }
 }
 
 // MARK: - Table Cell Components
@@ -137,7 +548,7 @@ struct FieldMapsTableView: View {
 struct TableHeaderCell: View {
     let title: String
     let width: CGFloat
-    
+
     var body: some View {
         Text(title)
             .font(.subheadline)
@@ -154,7 +565,7 @@ struct TableCell: View {
     let width: CGFloat
     var alignment: Alignment = .leading
     var color: Color = .primary
-    
+
     var body: some View {
         Text(text)
             .font(.system(size: 13))
@@ -166,36 +577,55 @@ struct TableCell: View {
     }
 }
 
+struct FilterTextField: View {
+    @Binding var text: String
+    let placeholder: String
+    let width: CGFloat
+
+    var body: some View {
+        TextField(placeholder, text: $text)
+            .font(.system(size: 11))
+            .textFieldStyle(PlainTextFieldStyle())
+            .frame(width: width, alignment: .leading)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Color(.systemBackground))
+            .cornerRadius(4)
+    }
+}
+
 // MARK: - ViewModel
 
 @MainActor
 class FieldMapsTableViewModel: ObservableObject {
-    @Published var fieldMaps: [FieldMap] = []
+    @Published var fieldMaps: [TabulaJob] = []
     @Published var isLoading = false
     @Published var showError = false
     @Published var errorMessage = ""
-    
-    private let apiService = TabulaAPIService.shared
-    
+
     func loadInitialData() async {
-        // Try loading test data
         await loadTestData()
     }
-    
+
     func loadTestData() async {
         isLoading = true
         defer { isLoading = false }
-        
+
         do {
             // Load test customer (ID 5429)
-            let maps = try await apiService.getFieldMaps(customerId: "5429")
-            fieldMaps = maps.sorted { $0.id > $1.id }
+            guard let url = URL(string: "http://192.168.68.226:3000/api/field-maps/customer/5429") else {
+                throw URLError(.badURL)
+            }
+
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let apiResponse = try JSONDecoder().decode(JobsAPIResponse.self, from: data)
+            fieldMaps = apiResponse.data.sorted { $0.id > $1.id }
         } catch {
             errorMessage = "Failed to load field maps: \(error.localizedDescription)"
             showError = true
         }
     }
-    
+
     func refreshData() async {
         await loadTestData()
     }
