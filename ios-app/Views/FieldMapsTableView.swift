@@ -207,16 +207,26 @@ struct FieldMapsTableView: View {
                 HStack(spacing: 0) {
                     if isSelectionMode {
                         TableHeaderCell(title: "", width: 50)
+                        Divider()
                     }
                     TableHeaderCell(title: "Customer Name", width: 180)
+                    Divider()
                     TableHeaderCell(title: "Contractor Name", width: 180)
+                    Divider()
                     TableHeaderCell(title: "Order ID", width: 100)
+                    Divider()
                     TableHeaderCell(title: "RTS", width: 80)
+                    Divider()
                     TableHeaderCell(title: "Requested Coverage Area (ha)", width: 180)
+                    Divider()
                     TableHeaderCell(title: "Status", width: 120)
+                    Divider()
                     TableHeaderCell(title: "prod dupli", width: 250)
+                    Divider()
                     TableHeaderCell(title: "Notes", width: 200)
+                    Divider()
                     TableHeaderCell(title: "Application Rate GPA", width: 150)
+                    Divider()
                     TableHeaderCell(title: "Map Address", width: 200)
                 }
                 .background(Color(.systemGray5))
@@ -225,10 +235,14 @@ struct FieldMapsTableView: View {
                 HStack(spacing: 0) {
                     if isSelectionMode {
                         Color.clear.frame(width: 50)
+                        Divider()
                     }
                     FilterTextField(text: $customerFilter, placeholder: "Filter this column...", width: 180)
+                    Divider()
                     FilterTextField(text: $contractorFilter, placeholder: "Filter this column...", width: 180)
+                    Divider()
                     FilterTextField(text: $orderIdFilter, placeholder: "Filter this column...", width: 100)
+                    Divider()
 
                     // RTS Dropdown
                     Picker("", selection: $rtsFilter) {
@@ -238,14 +252,20 @@ struct FieldMapsTableView: View {
                     }
                     .frame(width: 80)
                     .pickerStyle(MenuPickerStyle())
+                    Divider()
 
                     // Coverage Area Filter (supports: "2-3", ">5", "<10", or exact number)
                     FilterTextField(text: $coverageAreaFilter, placeholder: "e.g. 2-3, >5, <10", width: 180)
+                    Divider()
 
                     FilterTextField(text: $statusFilter, placeholder: "Filter this column...", width: 120)
+                    Divider()
                     FilterTextField(text: $productFilter, placeholder: "Filter this column...", width: 250)
+                    Divider()
                     FilterTextField(text: $notesFilter, placeholder: "Filter this column...", width: 200)
+                    Divider()
                     FilterTextField(text: $applicationRateFilter, placeholder: "Filter this column...", width: 150)
+                    Divider()
                     FilterTextField(text: $mapAddressFilter, placeholder: "Filter this column...", width: 200)
                 }
                 .background(Color(.systemGray6))
@@ -268,17 +288,27 @@ struct FieldMapsTableView: View {
                                     .font(.system(size: 20))
                                     .frame(width: 50)
                             }
+                            Divider()
                         }
 
                         TableCell(text: fieldMap.customer, width: 180)
+                        Divider()
                         TableCell(text: fieldMap.customer, width: 180) // Contractor same as customer
+                        Divider()
                         TableCell(text: "\(fieldMap.id)", width: 100)
+                        Divider()
                         TableCell(text: fieldMap.rts ? "Yes" : "No", width: 80, color: fieldMap.rts ? .green : .gray)
+                        Divider()
                         TableCell(text: String(format: "%.2f", fieldMap.area), width: 180, alignment: .trailing)
+                        Divider()
                         TableCell(text: fieldMap.status.capitalized, width: 120, color: statusColor(for: fieldMap.status))
+                        Divider()
                         TableCell(text: fieldMap.productList.isEmpty ? "-" : fieldMap.productList, width: 250)
+                        Divider()
                         TableCell(text: fieldMap.notes.isEmpty ? "-" : fieldMap.notes, width: 200)
+                        Divider()
                         TableCell(text: "-", width: 150) // Application rate placeholder
+                        Divider()
                         TableCell(text: fieldMap.address.isEmpty ? "-" : fieldMap.address, width: 200)
                     }
                     .background(selectedJobs.contains(fieldMap.id) && isSelectionMode ? Color.blue.opacity(0.1) : Color(.systemBackground))
