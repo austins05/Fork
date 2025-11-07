@@ -11,6 +11,19 @@ struct FieldMapsTableView: View {
     @State private var selectedJobs: Set<Int> = []
     @State private var isSelectionMode = false
 
+    // Filter states
+    @State private var customerFilter = ""
+    @State private var contractorFilter = ""
+    @State private var orderIdFilter = ""
+    @State private var rtsFilter = "All"
+    @State private var coverageAreaFromFilter = ""
+    @State private var coverageAreaToFilter = ""
+    @State private var statusFilter = ""
+    @State private var productFilter = ""
+    @State private var notesFilter = ""
+    @State private var applicationRateFilter = ""
+    @State private var mapAddressFilter = ""
+
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
@@ -92,6 +105,66 @@ struct FieldMapsTableView: View {
         .background(Color(.systemGray6))
     }
 
+    var filteredFieldMaps: [TabulaJob] {
+        viewModel.fieldMaps.filter { fieldMap in
+            // Customer filter
+            if !customerFilter.isEmpty && !fieldMap.customer.localizedCaseInsensitiveContains(customerFilter) {
+                return false
+            }
+
+            // Contractor filter
+            if !contractorFilter.isEmpty && !fieldMap.customer.localizedCaseInsensitiveContains(contractorFilter) {
+                return false
+            }
+
+            // Order ID filter
+            if !orderIdFilter.isEmpty && !"\(fieldMap.id)".contains(orderIdFilter) {
+                return false
+            }
+
+            // RTS filter
+            if rtsFilter != "All" {
+                let isRTS = fieldMap.rts
+                if rtsFilter == "Yes" && !isRTS {
+                    return false
+                }
+                if rtsFilter == "No" && isRTS {
+                    return false
+                }
+            }
+
+            // Coverage area filter
+            if !coverageAreaFromFilter.isEmpty, let fromValue = Double(coverageAreaFromFilter), fieldMap.area < fromValue {
+                return false
+            }
+            if !coverageAreaToFilter.isEmpty, let toValue = Double(coverageAreaToFilter), fieldMap.area > toValue {
+                return false
+            }
+
+            // Status filter
+            if !statusFilter.isEmpty && !fieldMap.status.localizedCaseInsensitiveContains(statusFilter) {
+                return false
+            }
+
+            // Product filter
+            if !productFilter.isEmpty && !fieldMap.productList.localizedCaseInsensitiveContains(productFilter) {
+                return false
+            }
+
+            // Notes filter
+            if !notesFilter.isEmpty && !fieldMap.notes.localizedCaseInsensitiveContains(notesFilter) {
+                return false
+            }
+
+            // Map address filter
+            if !mapAddressFilter.isEmpty && !fieldMap.address.localizedCaseInsensitiveContains(mapAddressFilter) {
+                return false
+            }
+
+            return true
+        }
+    }
+
     private var tableView: some View {
         ScrollView([.horizontal, .vertical]) {
             VStack(alignment: .leading, spacing: 0) {
@@ -106,17 +179,50 @@ struct FieldMapsTableView: View {
                     TableHeaderCell(title: "RTS", width: 80)
                     TableHeaderCell(title: "Requested Coverage Area (ha)", width: 180)
                     TableHeaderCell(title: "Status", width: 120)
-                    TableHeaderCell(title: "Ordered Products", width: 250)
+                    TableHeaderCell(title: "prod dupli", width: 250)
                     TableHeaderCell(title: "Notes", width: 200)
-                    TableHeaderCell(title: "Application Rate", width: 150)
+                    TableHeaderCell(title: "Application Rate GPA", width: 150)
                     TableHeaderCell(title: "Map Address", width: 200)
                 }
                 .background(Color(.systemGray5))
 
+                // Filter Row
+                HStack(spacing: 0) {
+                    if isSelectionMode {
+                        Color.clear.frame(width: 50)
+                    }
+                    FilterTextField(text: $customerFilter, placeholder: "Filter this column...", width: 180)
+                    FilterTextField(text: $contractorFilter, placeholder: "Filter this column...", width: 180)
+                    FilterTextField(text: $orderIdFilter, placeholder: "Filter this column...", width: 100)
+
+                    // RTS Dropdown
+                    Picker("", selection: $rtsFilter) {
+                        Text("All").tag("All")
+                        Text("Yes").tag("Yes")
+                        Text("No").tag("No")
+                    }
+                    .frame(width: 80)
+                    .pickerStyle(MenuPickerStyle())
+
+                    // Coverage Area Range
+                    HStack(spacing: 2) {
+                        FilterTextField(text: $coverageAreaFromFilter, placeholder: "Filter From...", width: 85)
+                        FilterTextField(text: $coverageAreaToFilter, placeholder: "Filter To...", width: 85)
+                    }
+                    .frame(width: 180)
+
+                    FilterTextField(text: $statusFilter, placeholder: "Filter this column...", width: 120)
+                    FilterTextField(text: $productFilter, placeholder: "Filter this column...", width: 250)
+                    FilterTextField(text: $notesFilter, placeholder: "Filter this column...", width: 200)
+                    FilterTextField(text: $applicationRateFilter, placeholder: "Filter this column...", width: 150)
+                    FilterTextField(text: $mapAddressFilter, placeholder: "Filter this column...", width: 200)
+                }
+                .background(Color(.systemGray6))
+
                 Divider()
 
                 // Data Rows
-                ForEach(viewModel.fieldMaps) { fieldMap in
+                ForEach(filteredFieldMaps) { fieldMap in
                     HStack(spacing: 0) {
                         if isSelectionMode {
                             Button(action: {
@@ -226,6 +332,25 @@ struct TableCell: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 10)
             .lineLimit(2)
+    }
+}
+
+struct FilterTextField: View {
+    @Binding var text: String
+    let placeholder: String
+    let width: CGFloat
+
+    var body: some View {
+        TextField(placeholder, text: $text)
+            .font(.system(size: 11))
+            .textFieldStyle(PlainTextFieldStyle())
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Color(.systemBackground))
+            .cornerRadius(4)
+            .frame(width: width)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 4)
     }
 }
 
