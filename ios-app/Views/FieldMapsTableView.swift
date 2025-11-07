@@ -5,6 +5,7 @@
 
 import SwiftUI
 import Combine
+import CoreLocation
 
 struct FieldMapsTableView: View {
     @StateObject private var viewModel = FieldMapsTableViewModel()
@@ -85,12 +86,31 @@ struct FieldMapsTableView: View {
             Spacer()
 
             Button(action: {
+                Task {
+                    await importSelectedToMap()
+                }
+            }) {
+                HStack {
+                    Image(systemName: "map.fill")
+                    Text("Import to Map")
+                }
+                .font(.subheadline)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(8)
+            }
+            .disabled(viewModel.isLoading)
+
+            Button(action: {
                 // Select all
                 selectedJobs = Set(viewModel.fieldMaps.map { $0.id })
             }) {
                 Text("Select All")
                     .font(.subheadline)
             }
+            .padding(.leading, 8)
 
             Button(action: {
                 selectedJobs.removeAll()
@@ -360,6 +380,83 @@ struct FieldMapsTableView: View {
         case "in progress", "assigned": return .orange
         default: return .primary
         }
+    }
+
+    func importSelectedToMap() async {
+        guard !selectedJobs.isEmpty else { return }
+
+        viewModel.isLoading = true
+        defer { viewModel.isLoading = false }
+
+        do {
+            var fields: [FieldData] = []
+
+            for jobId in selectedJobs {
+                guard let job = viewModel.fieldMaps.first(where: { $0.id == jobId }) else { continue }
+
+                // Fetch geometry from backend
+                let url = URL(string: "http://192.168.68.226:3000/api/field-maps/\(jobId)/geometry?type=requested")!
+                let (data, _) = try await URLSession.shared.data(from: url)
+
+                // Parse GeoJSON
+                if let geojson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let geometry = geojson["geometry"] as? [String: Any],
+                   let coordinates = parseGeoJSONCoordinates(geometry) {
+
+                    let fieldData = FieldData(
+                        id: job.id,
+                        name: job.name,
+                        coordinates: coordinates,
+                        acres: job.area * 2.47105, // Convert hectares to acres
+                        color: "#00FF7F",
+                        category: job.status,
+                        application: job.productList,
+                        description: job.notes,
+                        source: .tabula
+                    )
+                    fields.append(fieldData)
+                }
+            }
+
+            // Import to map using shared storage
+            await MainActor.run {
+                SharedFieldStorage.shared.addFieldsForImport(fields)
+                viewModel.errorMessage = "Imported \(fields.count) fields to Map tab"
+                viewModel.showError = true
+            }
+
+        } catch {
+            await MainActor.run {
+                viewModel.errorMessage = "Failed to import: \(error.localizedDescription)"
+                viewModel.showError = true
+            }
+        }
+    }
+
+    func parseGeoJSONCoordinates(_ geometry: [String: Any]) -> [CLLocationCoordinate2D]? {
+        guard let type = geometry["type"] as? String else { return nil }
+
+        if type == "Polygon" {
+            guard let coords = geometry["coordinates"] as? [[[Double]]] else { return nil }
+            // First ring is outer boundary
+            if let ring = coords.first {
+                return ring.compactMap { coord in
+                    guard coord.count >= 2 else { return nil }
+                    return CLLocationCoordinate2D(latitude: coord[1], longitude: coord[0])
+                }
+            }
+        } else if type == "MultiPolygon" {
+            guard let coords = geometry["coordinates"] as? [[[[Double]]]] else { return nil }
+            // Take first polygon's first ring
+            if let polygon = coords.first, let ring = polygon.first {
+                return ring.compactMap { coord in
+                    guard coord.count >= 2 else { return nil }
+                    return CLLocationCoordinate2D(latitude: coord[1], longitude: coord[0])
+                }
+            }
+        }
+
+        return nil
     }
 }
 
