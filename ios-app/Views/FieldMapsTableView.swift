@@ -16,8 +16,7 @@ struct FieldMapsTableView: View {
     @State private var contractorFilter = ""
     @State private var orderIdFilter = ""
     @State private var rtsFilter = "All"
-    @State private var coverageAreaFromFilter = ""
-    @State private var coverageAreaToFilter = ""
+    @State private var coverageAreaFilter = ""
     @State private var statusFilter = ""
     @State private var productFilter = ""
     @State private var notesFilter = ""
@@ -105,6 +104,43 @@ struct FieldMapsTableView: View {
         .background(Color(.systemGray6))
     }
 
+    func matchesAreaFilter(area: Double, filter: String) -> Bool {
+        let trimmed = filter.trimmingCharacters(in: .whitespaces)
+
+        // Handle range format: "2-3" or "2 - 3"
+        if trimmed.contains("-") {
+            let parts = trimmed.components(separatedBy: "-").map { $0.trimmingCharacters(in: .whitespaces) }
+            if parts.count == 2,
+               let min = Double(parts[0]),
+               let max = Double(parts[1]) {
+                return area >= min && area <= max
+            }
+        }
+
+        // Handle greater than: ">5"
+        if trimmed.hasPrefix(">") {
+            let numberPart = trimmed.dropFirst().trimmingCharacters(in: .whitespaces)
+            if let value = Double(numberPart) {
+                return area > value
+            }
+        }
+
+        // Handle less than: "<5"
+        if trimmed.hasPrefix("<") {
+            let numberPart = trimmed.dropFirst().trimmingCharacters(in: .whitespaces)
+            if let value = Double(numberPart) {
+                return area < value
+            }
+        }
+
+        // Handle exact match
+        if let value = Double(trimmed) {
+            return abs(area - value) < 0.01 // Allow small floating point differences
+        }
+
+        return false
+    }
+
     var filteredFieldMaps: [TabulaJob] {
         viewModel.fieldMaps.filter { fieldMap in
             // Customer filter
@@ -133,12 +169,11 @@ struct FieldMapsTableView: View {
                 }
             }
 
-            // Coverage area filter
-            if !coverageAreaFromFilter.isEmpty, let fromValue = Double(coverageAreaFromFilter), fieldMap.area < fromValue {
-                return false
-            }
-            if !coverageAreaToFilter.isEmpty, let toValue = Double(coverageAreaToFilter), fieldMap.area > toValue {
-                return false
+            // Coverage area filter (supports ranges like "2-3", ">5", "<10")
+            if !coverageAreaFilter.isEmpty {
+                if !matchesAreaFilter(area: fieldMap.area, filter: coverageAreaFilter) {
+                    return false
+                }
             }
 
             // Status filter
@@ -204,12 +239,8 @@ struct FieldMapsTableView: View {
                     .frame(width: 80)
                     .pickerStyle(MenuPickerStyle())
 
-                    // Coverage Area Range
-                    HStack(spacing: 2) {
-                        FilterTextField(text: $coverageAreaFromFilter, placeholder: "Filter From...", width: 85)
-                        FilterTextField(text: $coverageAreaToFilter, placeholder: "Filter To...", width: 85)
-                    }
-                    .frame(width: 180)
+                    // Coverage Area Filter (supports: "2-3", ">5", "<10", or exact number)
+                    FilterTextField(text: $coverageAreaFilter, placeholder: "e.g. 2-3, >5, <10", width: 180)
 
                     FilterTextField(text: $statusFilter, placeholder: "Filter this column...", width: 120)
                     FilterTextField(text: $productFilter, placeholder: "Filter this column...", width: 250)
