@@ -8,10 +8,17 @@ import Combine
 
 struct FieldMapsTableView: View {
     @StateObject private var viewModel = FieldMapsTableViewModel()
+    @State private var selectedJobs: Set<Int> = []
+    @State private var isSelectionMode = false
 
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
+                // Selection toolbar
+                if isSelectionMode && !selectedJobs.isEmpty {
+                    selectionToolbar
+                }
+
                 if viewModel.isLoading {
                     ProgressView("Loading jobs...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -24,6 +31,17 @@ struct FieldMapsTableView: View {
             .navigationTitle("Field Maps")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        isSelectionMode.toggle()
+                        if !isSelectionMode {
+                            selectedJobs.removeAll()
+                        }
+                    }) {
+                        Text(isSelectionMode ? "Done" : "Select")
+                    }
+                }
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         Task {
@@ -47,11 +65,41 @@ struct FieldMapsTableView: View {
         .navigationViewStyle(StackNavigationViewStyle())
     }
 
+    private var selectionToolbar: some View {
+        HStack {
+            Text("\(selectedJobs.count) selected")
+                .font(.headline)
+
+            Spacer()
+
+            Button(action: {
+                // Select all
+                selectedJobs = Set(viewModel.fieldMaps.map { $0.id })
+            }) {
+                Text("Select All")
+                    .font(.subheadline)
+            }
+
+            Button(action: {
+                selectedJobs.removeAll()
+            }) {
+                Text("Clear")
+                    .font(.subheadline)
+            }
+            .padding(.leading, 8)
+        }
+        .padding()
+        .background(Color(.systemGray6))
+    }
+
     private var tableView: some View {
         ScrollView([.horizontal, .vertical]) {
             VStack(alignment: .leading, spacing: 0) {
                 // Header Row
                 HStack(spacing: 0) {
+                    if isSelectionMode {
+                        TableHeaderCell(title: "", width: 50)
+                    }
                     TableHeaderCell(title: "Customer Name", width: 180)
                     TableHeaderCell(title: "Contractor Name", width: 180)
                     TableHeaderCell(title: "Order ID", width: 100)
@@ -70,6 +118,21 @@ struct FieldMapsTableView: View {
                 // Data Rows
                 ForEach(viewModel.fieldMaps) { fieldMap in
                     HStack(spacing: 0) {
+                        if isSelectionMode {
+                            Button(action: {
+                                if selectedJobs.contains(fieldMap.id) {
+                                    selectedJobs.remove(fieldMap.id)
+                                } else {
+                                    selectedJobs.insert(fieldMap.id)
+                                }
+                            }) {
+                                Image(systemName: selectedJobs.contains(fieldMap.id) ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(selectedJobs.contains(fieldMap.id) ? .blue : .gray)
+                                    .font(.system(size: 20))
+                                    .frame(width: 50)
+                            }
+                        }
+
                         TableCell(text: fieldMap.customer, width: 180)
                         TableCell(text: fieldMap.customer, width: 180) // Contractor same as customer
                         TableCell(text: "\(fieldMap.id)", width: 100)
@@ -81,7 +144,7 @@ struct FieldMapsTableView: View {
                         TableCell(text: "-", width: 150) // Application rate placeholder
                         TableCell(text: fieldMap.address.isEmpty ? "-" : fieldMap.address, width: 200)
                     }
-                    .background(Color(.systemBackground))
+                    .background(selectedJobs.contains(fieldMap.id) && isSelectionMode ? Color.blue.opacity(0.1) : Color(.systemBackground))
 
                     Divider()
                 }
