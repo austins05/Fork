@@ -32,7 +32,7 @@ struct RotorSyncApp: App {
                             Text("Map")
                         }
                     
-                    FieldMapsManagementView()
+                    FieldMapsTableView()
                         .tabItem {
                             Image(systemName: "map.circle.fill")
                             Text("Field Maps")

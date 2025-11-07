@@ -8,7 +8,6 @@ import Combine
 
 struct FieldMapsTableView: View {
     @StateObject private var viewModel = FieldMapsTableViewModel()
-    @Environment(\.dismiss) var dismiss
     
     var body: some View {
         NavigationView {
@@ -22,15 +21,9 @@ struct FieldMapsTableView: View {
                     tableView
                 }
             }
-            .navigationTitle("Field Maps Table")
+            .navigationTitle("Field Maps")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") {
-                        dismiss()
-                    }
-                }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         Task {
@@ -51,6 +44,7 @@ struct FieldMapsTableView: View {
                 Text(viewModel.errorMessage)
             }
         }
+        .navigationViewStyle(StackNavigationViewStyle())
     }
     
     private var tableView: some View {
@@ -105,13 +99,17 @@ struct FieldMapsTableView: View {
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text("Import field maps to view them in the table")
+            Text("Field maps will appear here when available")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
             
-            Button(action: { dismiss() }) {
-                Text("Go to Field Maps")
+            Button(action: {
+                Task {
+                    await viewModel.refreshData()
+                }
+            }) {
+                Text("Refresh")
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
                     .background(Color.blue)
