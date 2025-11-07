@@ -234,7 +234,7 @@ struct MapRepresentable: UIViewRepresentable {
                                 var coords = workedCoords
                                 let workedLine = MKPolyline(coordinates: &coords, count: coords.count)
                                 workedLine.title = field.name + " (Spray Line \(index + 1))"
-                                workedLine.subtitle = "spray_line_\(field.id)_\(index)"
+                                workedLine.subtitle = "spray_line_\(field.id)_\(index)_\(field.color)"
                                 mapView.addOverlay(workedLine)
                             }
                         }
@@ -269,7 +269,17 @@ struct MapRepresentable: UIViewRepresentable {
                 // Check if it's a spray line
                 if let subtitle = polyline.subtitle, subtitle.starts(with: "spray_line_") {
                     print("✈️ Rendering SPRAY LINE (polyline)")
-                    r.strokeColor = UIColor.systemGreen
+                    
+                    // Extract field color from subtitle (format: spray_line_fieldId_index_hexColor)
+                    let parts = subtitle.split(separator: "_")
+                    if parts.count >= 4 {
+                        let fieldHexColor = String(parts[3])
+                        r.strokeColor = Self.contrastingColor(for: fieldHexColor)
+                    } else {
+                        // Fallback to green if color not found
+                        r.strokeColor = UIColor.systemGreen
+                    }
+                    
                     r.lineWidth = 3
                     return r
                 }
@@ -506,6 +516,40 @@ struct MapRepresentable: UIViewRepresentable {
                 return view
             }
             return nil
+        }
+        
+        // Helper function to calculate contrasting color
+        static func contrastingColor(for hexColor: String) -> UIColor {
+            // Handle empty color -> use white for contrast
+            if hexColor.isEmpty {
+                return UIColor.white
+            }
+            
+            // Parse hex color to RGB
+            let hex = hexColor.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+            var int: UInt64 = 0
+            Scanner(string: hex).scanHexInt64(&int)
+            
+            let r, g, b: Double
+            switch hex.count {
+            case 3:
+                r = Double((int >> 8) * 17) / 255.0
+                g = Double((int >> 4 & 0xF) * 17) / 255.0
+                b = Double((int & 0xF) * 17) / 255.0
+            case 6:
+                r = Double(int >> 16) / 255.0
+                g = Double(int >> 8 & 0xFF) / 255.0
+                b = Double(int & 0xFF) / 255.0
+            default:
+                return UIColor.white
+            }
+            
+            // Calculate relative luminance using WCAG formula
+            let luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+            
+            // If background is dark (luminance < 0.5), use white lines
+            // If background is light (luminance >= 0.5), use black lines
+            return luminance < 0.5 ? UIColor.white : UIColor.black
         }
         
         // Helper function to add group badge
