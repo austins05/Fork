@@ -66,10 +66,41 @@ router.post('/bulk', async (req, res) => {
 });
 
 /**
+ * Get recent field maps (last N across all customers)
+ * GET /api/field-maps/recent?limit=20
+ * IMPORTANT: Must be BEFORE /:fieldId route to avoid being matched as fieldId
+ */
+router.get('/recent', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 20;
+
+    // Get jobs from default test customer for now
+    const fieldMaps = await tabulaService.getFieldMaps('5429');
+
+    // Sort by modified date (most recent first) and limit
+    const sortedMaps = fieldMaps
+      .sort((a, b) => (b.modifiedDate || 0) - (a.modifiedDate || 0))
+      .slice(0, limit);
+
+    res.json({
+      success: true,
+      count: sortedMaps.length,
+      data: sortedMaps
+    });
+  } catch (error) {
+    console.error('Get recent field maps error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
  * Get detailed field map data
  * GET /api/field-maps/:fieldId
  */
-router.get('/:fieldId', async (req, res) => {
+router.get('/:fieldId(\\d+)', async (req, res) => {
   try {
     const { fieldId } = req.params;
     const fieldMap = await tabulaService.getFieldMapDetails(fieldId);
@@ -91,7 +122,7 @@ router.get('/:fieldId', async (req, res) => {
  * Get field geometry (requested or worked)
  * GET /api/field-maps/:fieldId/geometry?type=worked
  */
-router.get('/:fieldId/geometry', async (req, res) => {
+router.get('/:fieldId(\\d+)/geometry', async (req, res) => {
   try {
     const { fieldId } = req.params;
     const { type } = req.query;
@@ -122,7 +153,7 @@ router.get('/:fieldId/geometry', async (req, res) => {
  * Download field map in specific format
  * GET /api/field-maps/:fieldId/download?format=geojson
  */
-router.get('/:fieldId/download', async (req, res) => {
+router.get('/:fieldId(\\d+)/download', async (req, res) => {
   try {
     const { fieldId } = req.params;
     const { format } = req.query;
@@ -136,37 +167,6 @@ router.get('/:fieldId/download', async (req, res) => {
     });
   } catch (error) {
     console.error('Download field map error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-/**
- * Get recent field maps (last 20 across all customers)
- * GET /api/field-maps/recent?limit=20
- */
-router.get('/recent/:limit?', async (req, res) => {
-  try {
-    const limit = parseInt(req.params.limit) || 20;
-
-    // Get jobs from default test customer for now
-    // In production, this would query across all customers
-    const fieldMaps = await tabulaService.getFieldMaps('5429');
-
-    // Sort by modified date (most recent first) and limit
-    const sortedMaps = fieldMaps
-      .sort((a, b) => (b.modifiedDate || 0) - (a.modifiedDate || 0))
-      .slice(0, limit);
-
-    res.json({
-      success: true,
-      count: sortedMaps.length,
-      data: sortedMaps
-    });
-  } catch (error) {
-    console.error('Get recent field maps error:', error);
     res.status(500).json({
       success: false,
       error: error.message

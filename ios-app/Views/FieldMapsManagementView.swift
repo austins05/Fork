@@ -82,6 +82,9 @@ struct FieldMapsManagementView: View {
         } message: {
             Text(viewModel.errorMessage)
         }
+        .task {
+            await viewModel.autoLoadRecentFieldMaps()
+        }
     }
 
     // MARK: - View Components

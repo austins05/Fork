@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import CoreLocation
 
 @MainActor
 class FieldMapsViewModel: ObservableObject {
@@ -19,12 +20,46 @@ class FieldMapsViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var showError = false
     @Published var errorMessage = ""
+    @Published var hideMapGeometries = false
+    @Published var hasAutoLoaded = false  // NEW: Track if we've auto-loaded
 
     // MARK: - Services
 
     let apiService = TabulaAPIService()
+    private let fieldStorage = SharedFieldStorage.shared
 
     // MARK: - Methods
+
+    /// Auto-load recent field maps on first view appearance
+    func autoLoadRecentFieldMaps() async {
+        // Only auto-load once per app session
+        guard !hasAutoLoaded else {
+            print("📱 Skipping auto-load (already loaded)")
+            return
+        }
+        
+        hasAutoLoaded = true
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            print("📱 Auto-loading recent field maps...")
+            let maps = try await apiService.getRecentFieldMaps(limit: 20)
+            
+            // Add to field maps list
+            fieldMaps = maps.sorted { $0.name < $1.name }
+            
+            // Fetch geometries and add to Map tab
+            await addFieldsToMapTab(maps)
+            
+            print("✅ Auto-loaded \(maps.count) field maps")
+            
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+            print("❌ Auto-load failed: \(error.localizedDescription)")
+        }
+    }
 
     /// Add customers to selection
     func addCustomers(_ customers: [Customer]) {
@@ -66,6 +101,12 @@ class FieldMapsViewModel: ObservableObject {
             // Sort by name
             fieldMaps.sort { $0.name < $1.name }
 
+            // Fetch geometries and add to SharedFieldStorage for Map tab display
+            await addFieldsToMapTab(maps)
+
+            // Show geometries on map for newly imported fields
+            hideMapGeometries = false
+
             print("✅ Imported \(maps.count) field maps")
 
         } catch {
@@ -73,6 +114,78 @@ class FieldMapsViewModel: ObservableObject {
             showError = true
             print("❌ Error importing field maps: \(error.localizedDescription)")
         }
+    }
+
+    // Fetch geometries and add to SharedFieldStorage
+    private func addFieldsToMapTab(_ maps: [FieldMap]) async {
+        print("🗺️  Adding \(maps.count) fields to Map tab...")
+        
+        var successCount = 0
+        var failCount = 0
+        
+        for map in maps {
+            do {
+                // Fetch geometry from Tabula API
+                let geometryJSON = try await apiService.getFieldGeometry(fieldId: "\(map.id)", type: "requested")
+                
+                // Extract coordinates from GeoJSON
+                if let coordinates = extractCoordinates(from: geometryJSON) {
+                    // Convert FieldMap to FieldData
+                    let fieldData = FieldData(
+                        id: map.id,
+                        name: map.name,
+                        coordinates: coordinates,
+                        acres: map.area,
+                        color: "#4A90E2",  // Default blue color
+                        category: map.productList,
+                        application: map.productList,
+                        description: map.notes ?? map.customer,
+                        source: .tabula  // Mark as Tabula source
+                    )
+                    
+                    // Add to SharedFieldStorage
+                    fieldStorage.addField(fieldData)
+                    successCount += 1
+                    print("   ✅ Added '\(map.name)' to Map tab (\(coordinates.count) coordinates)")
+                } else {
+                    failCount += 1
+                    print("   ⚠️  No geometry found for '\(map.name)'")
+                }
+                
+            } catch {
+                failCount += 1
+                print("   ❌ Failed to fetch geometry for '\(map.name)': \(error.localizedDescription)")
+            }
+        }
+        
+        print("🗺️  Map tab update complete: \(successCount) added, \(failCount) failed")
+    }
+
+    // Extract coordinates from GeoJSON response
+    private func extractCoordinates(from geoJSON: [String: Any]) -> [CLLocationCoordinate2D]? {
+        guard let data = geoJSON["data"] as? [String: Any],
+              let features = data["features"] as? [[String: Any]],
+              let firstFeature = features.first,
+              let geometry = firstFeature["geometry"] as? [String: Any],
+              let type = geometry["type"] as? String,
+              let coordinates = geometry["coordinates"] as? [[[Double]]] else {
+            print("   ❌ Failed to extract coordinates from GeoJSON structure")
+            return nil
+        }
+
+        // Handle Polygon type (first array of coordinates)
+        guard type == "Polygon", let ring = coordinates.first else {
+            print("   ❌ Not a Polygon type or empty coordinates")
+            return nil
+        }
+
+        // Convert [[lon, lat]] to CLLocationCoordinate2D
+        let coords = ring.compactMap { coord -> CLLocationCoordinate2D? in
+            guard coord.count >= 2 else { return nil }
+            return CLLocationCoordinate2D(latitude: coord[1], longitude: coord[0])
+        }
+        
+        return coords.count >= 3 ? coords : nil  // Need at least 3 coords for polygon
     }
 
     /// Refresh field maps for all imported maps
@@ -88,6 +201,9 @@ class FieldMapsViewModel: ObservableObject {
         do {
             let maps = try await apiService.getFieldMapsForCustomers(customerIds: customerIds)
             fieldMaps = maps.sorted { $0.name < $1.name }
+            
+            // Update Map tab fields too
+            await addFieldsToMapTab(maps)
         } catch {
             errorMessage = error.localizedDescription
             showError = true
@@ -102,6 +218,24 @@ class FieldMapsViewModel: ObservableObject {
     /// Clear all field maps
     func clearAllFieldMaps() {
         fieldMaps.removeAll()
+    }
+
+    /// Clear map geometries (removes all Tabula field boundaries from Map tab)
+    func clearMapGeometries() {
+        print("🗑️  Clearing Tabula field geometries from Map tab...")
+        // Clear Tabula fields from SharedFieldStorage (affects Map tab)
+        fieldStorage.clearTabulaFields()
+        print("   ✅ Map geometries cleared")
+    }
+
+    /// Show map geometries again
+    func showMapGeometries() {
+        hideMapGeometries = false
+    }
+
+    /// Computed property for map field maps (respects hide flag)
+    var mapFieldMaps: [FieldMap] {
+        return hideMapGeometries ? [] : fieldMaps
     }
 
     /// Get field maps for a specific customer

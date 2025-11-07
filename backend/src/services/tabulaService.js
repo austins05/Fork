@@ -106,24 +106,41 @@ class TabulaService {
       const accountId = customerId || config.accountId;
       const response = await this.client.get(`/accounts/${accountId}/jobs`);
 
+      // Fetch full details for each job to get RTS field
+      // RTS is only available in the detail endpoint, not the list
+      const detailPromises = response.data.map(job =>
+        this.client.get(`/accounts/${accountId}/jobs/${job.id}`)
+          .then(detailResponse => detailResponse.data)
+          .catch(error => {
+            console.error(`Failed to fetch details for job ${job.id}:`, error.message);
+            return null;
+          })
+      );
+
+      const jobDetails = await Promise.all(detailPromises);
+
       // Transform Tabula jobs into our field map format
-      return response.data.map(job => ({
-        id: job.id,
-        name: job.block_name || job.order_name || `Job ${job.id}`,
-        customer: job.customer || 'No Customer',
-        area: job.area || job.gross_coverage_area || 0,
-        status: job.status,
-        orderNumber: job.order_number || '',
-        requestedUrl: job.requested_url,
-        workedUrl: job.worked_url,
-        modifiedDate: job.modified_date,
-        dueDate: job.due_date,
-        productList: job.product_list || '',
-        address: job.address || '',
-        notes: job.notes || '',
-        deleted: job.deleted || false,
-        rts: job.rts || false
-      }));
+      return response.data.map((job, index) => {
+        const details = jobDetails[index];
+
+        return {
+          id: job.id,
+          name: job.block_name || job.order_name || `Job ${job.id}`,
+          customer: job.customer || 'No Customer',
+          area: job.area || job.gross_coverage_area || 0,
+          status: job.status,
+          orderNumber: job.order_number || '',
+          requestedUrl: job.requested_url,
+          workedUrl: job.worked_url,
+          modifiedDate: job.modified_date,
+          dueDate: job.due_date,
+          productList: (details?.product_list || job.product_list) || '',
+          address: (details?.address || job.address) || '',
+          notes: (details?.notes || job.notes) || '',
+          deleted: job.deleted || false,
+          rts: details?.RTS || false  // RTS is uppercase in Tabula API
+        };
+      });
     } catch (error) {
       throw this.handleError(error);
     }

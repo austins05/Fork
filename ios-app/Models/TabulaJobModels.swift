@@ -25,12 +25,13 @@ struct TabulaJob: Identifiable, Codable {
     let address: String
     let notes: String
     let deleted: Bool
+    let rts: Bool
 
     enum CodingKeys: String, CodingKey {
         case id, name, customer, area, status
         case orderNumber, requestedUrl, workedUrl
         case modifiedDate, dueDate, productList
-        case address, notes, deleted
+        case address, notes, deleted, rts
     }
 
     // Computed properties
