@@ -97,21 +97,19 @@ struct FieldMapsResponse: Codable {
 
 class FieldMapAnnotation: NSObject, MKAnnotation {
     let fieldMap: FieldMap
-
-    var coordinate: CLLocationCoordinate2D {
-        // We'll get this from geometry data
-        CLLocationCoordinate2D(latitude: 0, longitude: 0)
-    }
+    let coordinate: CLLocationCoordinate2D
 
     var title: String? {
         fieldMap.name
     }
 
     var subtitle: String? {
-        String(format: "%.2f acres", fieldMap.area)
+        "\(fieldMap.customer) • \(String(format: "%.1f acres", fieldMap.area))"
     }
 
-    init(fieldMap: FieldMap) {
+    init(fieldMap: FieldMap, coordinate: CLLocationCoordinate2D) {
         self.fieldMap = fieldMap
+        self.coordinate = coordinate
+        super.init()
     }
 }

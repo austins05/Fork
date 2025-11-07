@@ -5,6 +5,7 @@ struct FieldData: Identifiable, Codable {
     let id: Int
     let name: String
     let coordinates: [CLLocationCoordinate2D]
+    let workedCoordinates: [[CLLocationCoordinate2D]]? // Multiple spray line polygons
     let acres: Double
     let color: String
     let category: String?
@@ -25,10 +26,11 @@ struct FieldData: Identifiable, Codable {
     init(id: Int, name: String, coordinates: [CLLocationCoordinate2D], acres: Double,
          color: String, category: String?, application: String?, description: String?,
          prodDupli: String? = nil, productList: String? = nil, notes: String? = nil, address: String? = nil,
-         source: FieldSource? = nil) {
+         source: FieldSource? = nil, workedCoordinates: [[CLLocationCoordinate2D]]? = nil) {
         self.id = id
         self.name = name
         self.coordinates = coordinates
+        self.workedCoordinates = workedCoordinates
         self.acres = acres
         self.color = color
         self.category = category
@@ -44,7 +46,7 @@ struct FieldData: Identifiable, Codable {
     enum CodingKeys: String, CodingKey {
         case id, name, acres, color, category, application, description
         case prodDupli, productList, notes, address, source
-        case coordinates
+        case coordinates, workedCoordinates
     }
 
     struct Coordinate: Codable {
@@ -69,6 +71,13 @@ struct FieldData: Identifiable, Codable {
         let coords = try c.decode([Coordinate].self, forKey: .coordinates)
         coordinates = coords.map { CLLocationCoordinate2D(latitude: $0.latitude,
                                                          longitude: $0.longitude) }
+        if let workedPolygons = try c.decodeIfPresent([[Coordinate]].self, forKey: .workedCoordinates) {
+            workedCoordinates = workedPolygons.map { polygon in
+                polygon.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+            }
+        } else {
+            workedCoordinates = nil
+        }
     }
 
     func encode(to encoder: Encoder) throws {
@@ -88,5 +97,11 @@ struct FieldData: Identifiable, Codable {
         let coords = coordinates.map { Coordinate(latitude: $0.latitude,
                                                   longitude: $0.longitude) }
         try c.encode(coords, forKey: .coordinates)
+        if let workedPolygons = workedCoordinates {
+            let workedPolygonsMapped = workedPolygons.map { polygon in
+                polygon.map { Coordinate(latitude: $0.latitude, longitude: $0.longitude) }
+            }
+            try c.encode(workedPolygonsMapped, forKey: .workedCoordinates)
+        }
     }
 }

@@ -14,6 +14,7 @@ struct TabulaJob: Identifiable, Codable {
     let id: Int
     let name: String
     let customer: String
+    let contractor: String?
     let area: Double
     let status: String
     let orderNumber: String
@@ -30,7 +31,7 @@ struct TabulaJob: Identifiable, Codable {
     let rts: Bool
 
     enum CodingKeys: String, CodingKey {
-        case id, name, customer, area, status
+        case id, name, customer, contractor, area, status
         case orderNumber, requestedUrl, workedUrl
         case modifiedDate, dueDate, productList, prodDupli, color
         case address, notes, deleted, rts
@@ -152,7 +153,40 @@ struct GeoJSONFeature: Codable {
 
 struct GeoJSONGeometry: Codable {
     let type: String
-    let coordinates: [[[Double]]]  // For Polygon: [[[lon, lat], [lon, lat], ...]]
+    private let polygonCoordinates: [[[Double]]]?   // For Polygon
+    private let lineCoordinates: [[Double]]?        // For LineString
+
+    enum CodingKeys: String, CodingKey {
+        case type
+        case coordinates
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        type = try container.decode(String.self, forKey: .type)
+
+        if type == "Polygon" {
+            polygonCoordinates = try container.decode([[[Double]]].self, forKey: .coordinates)
+            lineCoordinates = nil
+        } else if type == "LineString" {
+            lineCoordinates = try container.decode([[Double]].self, forKey: .coordinates)
+            polygonCoordinates = nil
+        } else {
+            polygonCoordinates = nil
+            lineCoordinates = nil
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(type, forKey: .type)
+
+        if let coords = polygonCoordinates {
+            try container.encode(coords, forKey: .coordinates)
+        } else if let coords = lineCoordinates {
+            try container.encode(coords, forKey: .coordinates)
+        }
+    }
 }
 
 struct GeoJSONProperties: Codable {
@@ -175,23 +209,31 @@ struct GeoJSONProperties: Codable {
 
 extension GeoJSONGeometry {
     /// Convert GeoJSON coordinates to CLLocationCoordinate2D array
-    /// GeoJSON format: [[[longitude, latitude], ...]]
+    /// GeoJSON format: [longitude, latitude]
     var mapCoordinates: [CLLocationCoordinate2D] {
-        guard type == "Polygon", !coordinates.isEmpty else { return [] }
-
-        // Get the first ring (outer boundary)
-        let outerRing = coordinates[0]
-
-        return outerRing.map { coord in
-            // GeoJSON is [longitude, latitude]
-            guard coord.count >= 2 else {
-                return CLLocationCoordinate2D(latitude: 0, longitude: 0)
+        if type == "Polygon", let coords = polygonCoordinates, !coords.isEmpty {
+            // Get the first ring (outer boundary)
+            let outerRing = coords[0]
+            return outerRing.map { coord in
+                guard coord.count >= 2 else {
+                    return CLLocationCoordinate2D(latitude: 0, longitude: 0)
+                }
+                return CLLocationCoordinate2D(latitude: coord[1], longitude: coord[0])
             }
-            return CLLocationCoordinate2D(latitude: coord[1], longitude: coord[0])
+        } else if type == "LineString", let coords = lineCoordinates {
+            // Convert LineString coordinates directly
+            return coords.map { coord in
+                guard coord.count >= 2 else {
+                    return CLLocationCoordinate2D(latitude: 0, longitude: 0)
+                }
+                return CLLocationCoordinate2D(latitude: coord[1], longitude: coord[0])
+            }
         }
+
+        return []
     }
 
-    /// Calculate center point of polygon
+    /// Calculate center point of polygon or line
     var centerCoordinate: CLLocationCoordinate2D {
         let coords = mapCoordinates
         guard !coords.isEmpty else {
@@ -223,7 +265,7 @@ struct JobDetailAPIResponse: Codable {
 
 struct GeometryAPIResponse: Codable {
     let success: Bool
-    let format: String
+    let type: String  // Changed from "format" to "type" to match backend
     let data: GeoJSONFeatureCollection
 }
 

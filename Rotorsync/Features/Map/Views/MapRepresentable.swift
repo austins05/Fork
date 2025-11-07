@@ -227,6 +227,18 @@ struct MapRepresentable: UIViewRepresentable {
                         poly.subtitle = "field_\(field.id)"
                         mapView.addOverlay(poly)
 
+                        // Add worked geometry (spray lines) as POLYLINES
+                        if let workedPolygons = field.workedCoordinates {
+                            for (index, workedCoords) in workedPolygons.enumerated() where workedCoords.count > 2 {
+                                // Render as a POLYLINE (line path), not a filled polygon
+                                var coords = workedCoords
+                                let workedLine = MKPolyline(coordinates: &coords, count: coords.count)
+                                workedLine.title = field.name + " (Spray Line \(index + 1))"
+                                workedLine.subtitle = "spray_line_\(field.id)_\(index)"
+                                mapView.addOverlay(workedLine)
+                            }
+                        }
+
                         let sum = field.coordinates.reduce((lat: 0.0, lng: 0.0)) {
                             ($0.lat + $1.latitude, $0.lng + $1.longitude)
                         }
@@ -250,12 +262,40 @@ struct MapRepresentable: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+            // Handle MKPolyline (spray lines)
+            if let polyline = overlay as? MKPolyline {
+                let r = MKPolylineRenderer(polyline: polyline)
+
+                // Check if it's a spray line
+                if let subtitle = polyline.subtitle, subtitle.starts(with: "spray_line_") {
+                    print("✈️ Rendering SPRAY LINE (polyline)")
+                    r.strokeColor = UIColor.systemGreen
+                    r.lineWidth = 3
+                    return r
+                }
+
+                // Default polyline rendering
+                r.strokeColor = UIColor.blue
+                r.lineWidth = 2
+                return r
+            }
+
+            // Handle MKPolygon (field boundaries)
             if let poly = overlay as? MKPolygon {
                 let r = MKPolygonRenderer(polygon: poly)
-                
+
                 print("🎨 Rendering polygon: \(poly.title ?? "unknown")")
                 print("🎨 Polygon subtitle: \(poly.subtitle ?? "none")")
-                
+
+                // Check if it's worked geometry (spray lines) - render as GREEN
+                if let subtitle = poly.subtitle, subtitle.starts(with: "worked_") {
+                    print("✈️ Rendering SPRAY LINES (worked geometry)")
+                    r.fillColor = UIColor.systemGreen.withAlphaComponent(0.4)
+                    r.strokeColor = UIColor.systemGreen
+                    r.lineWidth = 3
+                    return r
+                }
+
                 // Extract field ID from subtitle (format: "field_123")
                 if let subtitle = poly.subtitle,
                    subtitle.starts(with: "field_"),

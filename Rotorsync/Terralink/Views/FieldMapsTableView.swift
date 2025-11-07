@@ -12,6 +12,11 @@ struct FieldMapsTableView: View {
     @State private var selectedJobs: Set<Int> = []
     @State private var hasLoadedData = false
 
+    // Import progress tracking
+    @State private var isImporting = false
+    @State private var importProgress = 0
+    @State private var importTotal = 0
+
     // Filter states
     @State private var customerFilter = ""
     @State private var contractorFilter = ""
@@ -26,19 +31,42 @@ struct FieldMapsTableView: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Selection toolbar
-                if !selectedJobs.isEmpty {
+            ZStack {
+                VStack(spacing: 0) {
+                    // Selection toolbar - Always visible
                     selectionToolbar
+
+                    if viewModel.isLoading {
+                        ProgressView("Loading jobs...")
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if viewModel.fieldMaps.isEmpty {
+                        emptyStateView
+                    } else {
+                        tableView
+                    }
                 }
 
-                if viewModel.isLoading {
-                    ProgressView("Loading jobs...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if viewModel.fieldMaps.isEmpty {
-                    emptyStateView
-                } else {
-                    tableView
+                // Import progress overlay
+                if isImporting {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+
+                    VStack(spacing: 16) {
+                        Text("Importing Fields")
+                            .font(.headline)
+
+                        ProgressView(value: Double(importProgress), total: Double(importTotal))
+                            .progressViewStyle(LinearProgressViewStyle())
+                            .frame(width: 250)
+
+                        Text("\(importProgress) of \(importTotal) downloaded")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(24)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(12)
+                    .shadow(radius: 10)
                 }
             }
             .navigationTitle("Field Maps")
@@ -56,7 +84,7 @@ struct FieldMapsTableView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         Task {
-                            hasLoadedData = true // Keep flag true to prevent auto-reload
+                            hasLoadedData = true
                             await viewModel.refreshData()
                         }
                     }) {
@@ -105,10 +133,19 @@ struct FieldMapsTableView: View {
             .disabled(viewModel.isLoading)
 
             Button(action: {
-                // Select all
-                selectedJobs = Set(viewModel.fieldMaps.map { $0.id })
+                // Reset all filters
+                customerFilter = ""
+                contractorFilter = ""
+                orderIdFilter = ""
+                rtsFilter = "All"
+                coverageAreaFilter = ""
+                statusFilter = ""
+                productFilter = ""
+                notesFilter = ""
+                applicationRateFilter = ""
+                mapAddressFilter = ""
             }) {
-                Text("Select All")
+                Text("Reset Filters")
                     .font(.subheadline)
             }
             .padding(.leading, 8)
@@ -222,10 +259,15 @@ struct FieldMapsTableView: View {
     }
 
     private var tableView: some View {
-        ScrollView([.horizontal, .vertical]) {
-            VStack(alignment: .leading, spacing: 0) {
-                // Header Row
-                HStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
+            Spacer()
+                .frame(height: 16)
+
+            // Synchronized horizontal scrolling for all sections
+            ScrollView(.horizontal, showsIndicators: true) {
+                VStack(alignment: .leading, spacing: 0) {
+                    // Header Row - ANCHORED
+                    HStack(spacing: 0) {
                     // Select All button
                     Button(action: {
                         if selectedJobs.count == filteredFieldMaps.count && !filteredFieldMaps.isEmpty {
@@ -263,8 +305,11 @@ struct FieldMapsTableView: View {
                     TableHeaderCell(title: "Map Address", width: 200)
                 }
                 .background(Color(.systemGray5))
+                .frame(height: 44)
 
-                // Filter Row
+                Divider()
+
+                // Filter Row - ANCHORED
                 HStack(spacing: 0) {
                     Color.clear
                         .frame(width: 50, alignment: .leading)
@@ -277,22 +322,10 @@ struct FieldMapsTableView: View {
                     Divider()
                     FilterTextField(text: $orderIdFilter, placeholder: "Filter this column...", width: 100)
                     Divider()
-
-                    // RTS Dropdown
-                    Picker("", selection: $rtsFilter) {
-                        Text("All").tag("All")
-                        Text("Yes").tag("Yes")
-                        Text("No").tag("No")
-                    }
-                    .pickerStyle(MenuPickerStyle())
-                    .frame(width: 80, alignment: .leading)
-                    .padding(.horizontal, 8)
+                    FilterTextField(text: $rtsFilter, placeholder: "All", width: 80)
                     Divider()
-
-                    // Coverage Area Filter (supports: "2-3", ">5", "<10", or exact number)
-                    FilterTextField(text: $coverageAreaFilter, placeholder: "e.g. 2-3, >5, <10", width: 100)
+                    FilterTextField(text: $coverageAreaFilter, placeholder: "Filter this column...", width: 100)
                     Divider()
-
                     FilterTextField(text: $statusFilter, placeholder: "Filter this column...", width: 120)
                     Divider()
                     FilterTextField(text: $productFilter, placeholder: "Filter this column...", width: 120)
@@ -304,11 +337,12 @@ struct FieldMapsTableView: View {
                     FilterTextField(text: $mapAddressFilter, placeholder: "Filter this column...", width: 200)
                 }
                 .background(Color(.systemGray6))
+                .frame(height: 40)
 
-                Divider()
-
-                // Data Rows
-                ForEach(filteredFieldMaps) { fieldMap in
+                // Data Rows - SCROLLABLE (vertical only)
+                ScrollView(.vertical, showsIndicators: true) {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(filteredFieldMaps) { fieldMap in
                     HStack(spacing: 0) {
                         Button(action: {
                             if selectedJobs.contains(fieldMap.id) {
@@ -328,7 +362,7 @@ struct FieldMapsTableView: View {
 
                         TableCell(text: fieldMap.customer, width: 180)
                         Divider()
-                        TableCell(text: fieldMap.customer, width: 180) // Contractor same as customer
+                        TableCell(text: fieldMap.contractor ?? "", width: 180)
                         Divider()
                         TableCell(text: "\(fieldMap.id)", width: 100)
                         Divider()
@@ -349,7 +383,10 @@ struct FieldMapsTableView: View {
                     .background(selectedJobs.contains(fieldMap.id) ? Color.blue.opacity(0.1) : Color(.systemBackground))
 
                     Divider()
+                    }
                 }
+                }
+            }
             }
         }
     }
@@ -399,8 +436,16 @@ struct FieldMapsTableView: View {
     func importSelectedToMap() async {
         guard !selectedJobs.isEmpty else { return }
 
-        viewModel.isLoading = true
-        defer { viewModel.isLoading = false }
+        await MainActor.run {
+            isImporting = true
+            importProgress = 0
+            importTotal = selectedJobs.count
+        }
+        defer {
+            Task { @MainActor in
+                isImporting = false
+            }
+        }
 
         do {
             var fields: [FieldData] = []
@@ -409,6 +454,7 @@ struct FieldMapsTableView: View {
             for jobId in selectedJobs {
                 guard let job = viewModel.fieldMaps.first(where: { $0.id == jobId }) else {
                     errors.append("Job \(jobId) not found")
+                    await MainActor.run { importProgress += 1 }
                     continue
                 }
 
@@ -424,6 +470,7 @@ struct FieldMapsTableView: View {
                             print("❌ Error response: \(errorMsg)")
                             errors.append("Job \(jobId): HTTP \(httpResponse.statusCode)")
                         }
+                        await MainActor.run { importProgress += 1 }
                         continue
                     }
                 }
@@ -437,18 +484,21 @@ struct FieldMapsTableView: View {
                 guard let response = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                     errors.append("Job \(jobId): Invalid JSON")
                     print("❌ Failed to parse JSON for job \(jobId)")
+                    await MainActor.run { importProgress += 1 }
                     continue
                 }
 
                 guard let responseData = response["data"] as? [String: Any] else {
                     errors.append("Job \(jobId): Missing data field")
                     print("❌ No 'data' field in response for job \(jobId)")
+                    await MainActor.run { importProgress += 1 }
                     continue
                 }
 
                 guard let features = responseData["features"] as? [[String: Any]], !features.isEmpty else {
                     errors.append("Job \(jobId): No features found")
                     print("❌ No features in data for job \(jobId)")
+                    await MainActor.run { importProgress += 1 }
                     continue
                 }
 
@@ -456,12 +506,14 @@ struct FieldMapsTableView: View {
                       let geometry = firstFeature["geometry"] as? [String: Any] else {
                     errors.append("Job \(jobId): Invalid feature geometry")
                     print("❌ Invalid geometry for job \(jobId)")
+                    await MainActor.run { importProgress += 1 }
                     continue
                 }
 
                 guard let coordinates = parseGeoJSONCoordinates(geometry) else {
                     errors.append("Job \(jobId): Failed to parse coordinates")
                     print("❌ Failed to parse coordinates for job \(jobId)")
+                    await MainActor.run { importProgress += 1 }
                     continue
                 }
                 // Use Color custom field from Tabula API and convert to hex
@@ -491,6 +543,31 @@ struct FieldMapsTableView: View {
                 
                 print("🎨 Import: Job \(job.id) (\(job.name)) - colorName: '\(colorName)' -> hex: '\(color)'")
 
+                // Fetch worked geometry (spray lines) - fetch ALL features
+                var workedPolygons: [[CLLocationCoordinate2D]]? = nil
+                let workedURLString = "http://192.168.68.226:3000/api/field-maps/\(job.id)/geometry?type=worked-detailed"
+                print("🔍 REQUESTING URL: \(workedURLString)")
+                if let workedURL = URL(string: workedURLString) {
+                    do {
+                        print("✅ URL created successfully, making request...")
+                        let (workedData, workedResponse) = try await URLSession.shared.data(from: workedURL)
+                        if let httpResponse = workedResponse as? HTTPURLResponse {
+                            print("📡 Response status: \(httpResponse.statusCode)")
+                        }
+                        if let httpResponse = workedResponse as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                            let geometryResponse = try JSONDecoder().decode(GeometryAPIResponse.self, from: workedData)
+                            // Fetch ALL features, not just the first one!
+                            let allPolygons = geometryResponse.data.features.compactMap { $0.geometry.mapCoordinates }
+                            if !allPolygons.isEmpty {
+                                workedPolygons = allPolygons
+                                print("✈️ Fetched worked geometry for job \(job.id): \(allPolygons.count) polygons with \(allPolygons.map{$0.count}.reduce(0,+)) total coords")
+                            }
+                        }
+                    } catch {
+                        print("⚠️ No worked geometry for job \(job.id): \(error.localizedDescription)")
+                    }
+                }
+
                 let fieldData = FieldData(
                     id: job.id,
                     name: job.name,
@@ -504,10 +581,16 @@ struct FieldMapsTableView: View {
                     productList: job.productList,
                     notes: job.notes,
                     address: job.address,
-                    source: .tabula
+                    source: .tabula,
+                    workedCoordinates: workedPolygons
                 )
                 fields.append(fieldData)
                 print("✅ Successfully parsed job \(jobId)")
+
+                // Update progress
+                await MainActor.run {
+                    importProgress += 1
+                }
             }
 
             // Import to map using shared storage
@@ -642,7 +725,12 @@ class FieldMapsTableViewModel: ObservableObject {
     }
 
     func refreshData() async {
+        // Reload field maps list from server
         await loadTestData()
+
+        // Clear all Tabula fields from the map to force re-import with fresh geometry
+        SharedFieldStorage.shared.clearAllFields()
+        print("✅ Refresh complete - cleared all fields. Re-select and import fields to get latest geometry")
     }
 }
 
