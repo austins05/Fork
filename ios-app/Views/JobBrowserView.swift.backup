@@ -1,0 +1,305 @@
+//
+//  JobBrowserView.swift
+//  Rotorsync - Tabula API Integration
+//
+//  Main view for browsing Tabula jobs (field maps)
+//
+
+import SwiftUI
+
+struct JobBrowserView: View {
+    @StateObject private var viewModel = JobBrowserViewModel()
+    @State private var showingFilterSheet = false
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                // Search bar
+                searchBar
+
+                // Status filter chips
+                if !viewModel.jobs.isEmpty {
+                    statusFilterChips
+                }
+
+                // Jobs list or empty state
+                if viewModel.isLoading {
+                    loadingView
+                } else if viewModel.filteredJobs.isEmpty && viewModel.jobs.isEmpty {
+                    emptyStateView
+                } else if viewModel.filteredJobs.isEmpty {
+                    noResultsView
+                } else {
+                    jobsList
+                }
+            }
+            .navigationTitle("Field Jobs")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { Task { await viewModel.refreshJobs() } }) {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .disabled(viewModel.isLoading)
+                }
+            }
+            .task {
+                if viewModel.jobs.isEmpty {
+                    await viewModel.loadJobs()
+                }
+            }
+            .alert("Error", isPresented: $viewModel.showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(viewModel.errorMessage)
+            }
+        }
+    }
+
+    // MARK: - View Components
+
+    private var searchBar: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.secondary)
+
+            TextField("Search jobs, customers, or orders...", text: $viewModel.searchText)
+                .textFieldStyle(PlainTextFieldStyle())
+
+            if !viewModel.searchText.isEmpty {
+                Button(action: { viewModel.searchText = "" }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .padding(12)
+        .background(Color(.systemGray6))
+        .cornerRadius(10)
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+    }
+
+    private var statusFilterChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(viewModel.statusOptions, id: \.self) { status in
+                    StatusChip(
+                        title: status.capitalized,
+                        isSelected: viewModel.filterStatus == status
+                    ) {
+                        viewModel.filterStatus = status
+                    }
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+        }
+        .background(Color(.systemBackground))
+    }
+
+    private var jobsList: some View {
+        List {
+            Section {
+                ForEach(viewModel.filteredJobs) { job in
+                    NavigationLink(destination: JobDetailView(job: job, viewModel: viewModel)) {
+                        JobRow(job: job)
+                    }
+                }
+            } header: {
+                Text("\(viewModel.filteredJobs.count) job\(viewModel.filteredJobs.count == 1 ? "" : "s")")
+                    .textCase(nil)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .listStyle(InsetGroupedListStyle())
+        .refreshable {
+            await viewModel.refreshJobs()
+        }
+    }
+
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.2)
+
+            Text("Loading jobs...")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var emptyStateView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "map.fill")
+                .font(.system(size: 60))
+                .foregroundColor(.gray)
+
+            Text("No Jobs Available")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text("Pull to refresh or check your backend connection")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+
+            Button(action: { Task { await viewModel.refreshJobs() } }) {
+                HStack {
+                    Image(systemName: "arrow.clockwise")
+                    Text("Refresh")
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var noResultsView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 50))
+                .foregroundColor(.gray)
+
+            Text("No Results")
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            Text("Try adjusting your search or filters")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            Button(action: {
+                viewModel.searchText = ""
+                viewModel.filterStatus = "all"
+            }) {
+                Text("Clear Filters")
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Color.blue.opacity(0.1))
+                    .foregroundColor(.blue)
+                    .cornerRadius(8)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Status Chip
+
+struct StatusChip: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(isSelected ? .semibold : .regular)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(isSelected ? Color.blue : Color(.systemGray5))
+                .foregroundColor(isSelected ? .white : .primary)
+                .cornerRadius(20)
+        }
+    }
+}
+
+// MARK: - Job Row
+
+struct JobRow: View {
+    let job: TabulaJob
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Job name and status
+            HStack {
+                Text(job.name)
+                    .font(.headline)
+
+                Spacer()
+
+                StatusBadge(status: job.status)
+            }
+
+            // Customer
+            if !job.customer.isEmpty {
+                Label(job.customer, systemImage: "person.fill")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+
+            // Order number
+            if !job.orderNumber.isEmpty {
+                Label("Order #\(job.orderNumber)", systemImage: "number")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            // Bottom row: Area and date
+            HStack {
+                Label(job.areaFormatted, systemImage: "grid")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Spacer()
+
+                Text(job.modifiedDateFormatted)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+
+            // Products (if any)
+            if !job.productList.isEmpty {
+                Text(job.productList)
+                    .font(.caption)
+                    .foregroundColor(.blue)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Status Badge
+
+struct StatusBadge: View {
+    let status: String
+
+    private var backgroundColor: Color {
+        switch status.lowercased() {
+        case "complete": return .green
+        case "placed": return .blue
+        case "assigned": return .orange
+        case "accepted": return .yellow
+        default: return .gray
+        }
+    }
+
+    var body: some View {
+        Text(status.capitalized)
+            .font(.caption2)
+            .fontWeight(.semibold)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(backgroundColor.opacity(0.2))
+            .foregroundColor(backgroundColor)
+            .cornerRadius(6)
+    }
+}
+
+// MARK: - Preview
+
+struct JobBrowserView_Previews: PreviewProvider {
+    static var previews: some View {
+        JobBrowserView()
+    }
+}
