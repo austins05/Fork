@@ -268,6 +268,7 @@ struct FieldMapsTableView: View {
                     Divider()
                     FilterTextField(text: $mapAddressFilter, placeholder: "Filter this column...", width: 200)
                 }
+                .padding(.leading, 18) // Add left padding to shift filter row
                 .background(Color(.systemGray6))
 
                 Divider()
