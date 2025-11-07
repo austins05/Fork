@@ -12,6 +12,7 @@ struct FieldMapsManagementView: View {
     @StateObject private var viewModel = FieldMapsViewModel()
     @State private var showingCustomerSearch = false
     @State private var showingMapView = false
+    @State private var showingTableView = false
 
     var body: some View {
         NavigationView {
@@ -43,12 +44,22 @@ struct FieldMapsManagementView: View {
                         }
                     }
                 }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if !viewModel.fieldMaps.isEmpty {
+                        Button(action: { showingTableView = true }) {
+                            Label("Table View", systemImage: "tablecells")
+                        }
+                    }
+                }
             }
             .sheet(isPresented: $showingCustomerSearch) {
                 CustomerSearchView(viewModel: viewModel)
             }
             .sheet(isPresented: $showingMapView) {
                 FieldMapsMapView(fieldMaps: viewModel.fieldMaps)
+            }
+            .sheet(isPresented: $showingTableView) {
+                FieldMapsTableView()
             }
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) { }
