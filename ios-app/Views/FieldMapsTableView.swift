@@ -250,8 +250,9 @@ struct FieldMapsTableView: View {
                         Text("Yes").tag("Yes")
                         Text("No").tag("No")
                     }
-                    .frame(width: 80)
                     .pickerStyle(MenuPickerStyle())
+                    .frame(width: 80, alignment: .leading)
+                    .padding(.horizontal, 8)
                     Divider()
 
                     // Coverage Area Filter (supports: "2-3", ">5", "<10", or exact number)
