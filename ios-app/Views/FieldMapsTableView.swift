@@ -238,8 +238,6 @@ class FieldMapsTableViewModel: ObservableObject {
     @Published var showError = false
     @Published var errorMessage = ""
 
-    private let apiService = TabulaAPIService.shared
-
     func loadInitialData() async {
         await loadTestData()
     }
@@ -250,8 +248,12 @@ class FieldMapsTableViewModel: ObservableObject {
 
         do {
             // Load test customer (ID 5429)
-            let response = try await apiService.session.data(from: URL(string: "http://192.168.68.226:3000/api/field-maps/customer/5429")!)
-            let apiResponse = try JSONDecoder().decode(JobsAPIResponse.self, from: response.0)
+            guard let url = URL(string: "http://192.168.68.226:3000/api/field-maps/customer/5429") else {
+                throw URLError(.badURL)
+            }
+
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let apiResponse = try JSONDecoder().decode(JobsAPIResponse.self, from: data)
             fieldMaps = apiResponse.data.sorted { $0.id > $1.id }
         } catch {
             errorMessage = "Failed to load field maps: \(error.localizedDescription)"
