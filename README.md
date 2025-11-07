@@ -19,6 +19,20 @@ Professional agricultural aviation iPad application featuring real-time engine m
 - **Backend Proxy**: Secure Node.js backend at 192.168.68.226:3000
 - **Source Tracking**: Distinguish between Tabula and MPZ Field Mapper fields
 
+### 🎨 Field Color Integration [STABLE v1.0]
+- **Color-Coded Fields**: Imported fields display with Tracmap-assigned colors
+  - Supported colors: Red, Orange, Yellow, Green, Teal, Blue, Purple, Pink, Gray
+  - Automatic color name to hex conversion
+  - Fields render with 40% transparency for visibility
+- **Color-Matched Pins**: Field pins automatically match polygon colors
+  - Map icon for all configured fields
+  - Instant visual identification on crowded maps
+- **Zebra Stripe Fallback**: Unconfigured fields display distinctive pattern
+  - Black & yellow diagonal stripes on polygon
+  - Zebra-striped pin with map icon
+  - Immediate identification of fields needing configuration
+- **Production Status**: Fully tested, stable, and ready for use
+
 ### 📍 Pin & Group Management
 - Drop custom pins on map with icons and notes
 - Organize pins in folders and groups
@@ -52,6 +66,107 @@ Professional agricultural aviation iPad application featuring real-time engine m
 - SMTC thermocouple reading via I2C
 - PeerTalk frame transmission to iPad
 - Port forwarding via iproxy
+
+## Field Color Integration Details
+
+### Overview
+Fields imported from Tracmap (Tabula API) now display with their assigned colors, providing instant visual identification on the map. Fields without assigned colors show a distinctive zebra stripe pattern for easy identification.
+
+### Color System
+
+#### Supported Colors
+| Color Name | Hex Code | Usage |
+|-----------|----------|-------|
+| Red | #FF0000 | High priority / urgent fields |
+| Orange | #FF8C00 | Medium priority fields |
+| Yellow | #FFFF00 | Standard fields |
+| Green | #00FF00 | Completed / verified fields |
+| Teal | #00FFFF | In progress fields |
+| Blue | #0000FF | Scheduled fields |
+| Purple | #9966FF | Special designation |
+| Pink | #FF69B4 | Flagged fields |
+| Gray | #808080 | Inactive / archived fields |
+
+#### Zebra Stripe Pattern
+Fields without assigned colors display a unique black & yellow diagonal stripe pattern:
+- **Polygon**: 70% opacity zebra stripes (20x20px pattern, diagonal lines)
+- **Pin**: Zebra stripe pattern with map icon
+- **Purpose**: Immediate identification of fields requiring color configuration in Tracmap
+
+### Visual Rendering
+
+#### Polygons
+- **With Color**: Field color at 40% transparency with 3px border
+- **Without Color**: Black & yellow diagonal stripes at 70% transparency with black border
+
+#### Pins (Annotations)
+- **Location**: Center point of field polygon
+- **With Color**: Pin matches field color with "map.fill" icon
+- **Without Color**: Zebra stripe pattern with "map.fill" icon
+- **Behavior**: Clickable with field name and details
+
+### Implementation Details
+
+#### Models (`Rotorsync/Terralink/Models/TabulaJobModels.swift`)
+```swift
+struct TabulaJob: Identifiable, Codable {
+    let color: String?  // Tracmap custom Color field
+    // ... other properties
+}
+```
+
+#### Color Conversion (`FieldMapsTableView.swift`)
+```swift
+// Convert color name from Tracmap to hex
+let colorMap: [String: String] = [
+    "red": "#FF0000",
+    "orange": "#FF8C00",
+    // ... etc
+]
+let hex = colorMap[colorName.lowercased()] ?? ""
+```
+
+#### Map Rendering (`MapRepresentable.swift`)
+- Polygon renderer checks field.color and applies:
+  - Hex color → UIColor conversion for colored fields
+  - Zebra stripe pattern for empty color
+- Pin renderer matches field by ID and applies same color logic
+
+### Usage
+
+#### Setting Colors in Tracmap
+1. Log into Tracmap web interface
+2. Navigate to job/field
+3. Set "Color" custom field to desired color name
+4. Sync changes (automatic)
+5. Re-import field in Rotorsync to see updated color
+
+#### Viewing in Rotorsync
+1. Import fields from Terralink tab
+2. Navigate to Map tab
+3. Fields display with assigned colors
+4. Zebra-striped fields indicate configuration needed
+
+### Testing
+
+#### Visual Verification
+```bash
+# Check backend color data
+curl http://192.168.68.226:3000/api/field-maps/customer/5429 | grep -A 2 "color"
+```
+
+Expected output should show color values like:
+```json
+"color": "Red",
+"color": "Orange",
+"color": "",  // Empty = zebra stripes
+```
+
+#### iOS Testing
+1. Import mix of colored and uncolored fields
+2. Verify colored fields match Tracmap assignments
+3. Verify zebra stripes appear for empty color fields
+4. Tap pins to confirm field identification
 
 ## Tabula Integration Details
 
