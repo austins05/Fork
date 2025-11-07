@@ -70,8 +70,8 @@ struct FieldMapsMapView: View {
                     Text(fieldMap.name)
                         .font(.headline)
 
-                    if let description = fieldMap.description {
-                        Text(description)
+                    if !fieldMap.notes.isEmpty {
+                        Text(fieldMap.notes)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -89,38 +89,37 @@ struct FieldMapsMapView: View {
 
             // Field details
             VStack(spacing: 8) {
-                if let area = fieldMap.area {
+                
                     HStack {
                         Image(systemName: "grid")
                             .foregroundColor(.blue)
                         Text("Area:")
                             .foregroundColor(.secondary)
                         Spacer()
-                        Text(String(format: "%.2f acres", area))
+                        Text(String(format: "%.2f acres", fieldMap.area))
                             .fontWeight(.medium)
-                    }
                 }
 
-                if let cropType = fieldMap.metadata?.cropType {
+                if !fieldMap.customer.isEmpty {
                     HStack {
                         Image(systemName: "leaf")
                             .foregroundColor(.green)
-                        Text("Crop:")
+                        Text("Customer:")
                             .foregroundColor(.secondary)
                         Spacer()
-                        Text(cropType)
+                        Text(fieldMap.customer)
                             .fontWeight(.medium)
                     }
                 }
 
-                if let season = fieldMap.metadata?.season {
+                if !fieldMap.status.isEmpty {
                     HStack {
                         Image(systemName: "calendar")
                             .foregroundColor(.orange)
-                        Text("Season:")
+                        Text("Status:")
                             .foregroundColor(.secondary)
                         Spacer()
-                        Text(season)
+                        Text(fieldMap.status.capitalized)
                             .fontWeight(.medium)
                     }
                 }
@@ -172,82 +171,24 @@ class TerralinkMapViewModel: ObservableObject {
     @Published var region: MKCoordinateRegion
 
     var mapView: MKMapView?
-
     init(fieldMaps: [FieldMap]) {
         self.fieldMaps = fieldMaps
 
-        // Calculate initial region to show all fields
-        if let firstField = fieldMaps.first,
-           let center = firstField.center {
-            self.region = MKCoordinateRegion(
-                center: center.clCoordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
-            )
-        } else {
-            // Default region
-            self.region = MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
-                span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
-            )
-        }
+        // TODO: Fetch geometry to get field center coordinates
+        // For now, use default region
+        self.region = MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
+            span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
+        )
     }
-
     func zoomToFitAll() {
-        guard !fieldMaps.isEmpty else { return }
-
-        var minLat = Double.infinity
-        var maxLat = -Double.infinity
-        var minLon = Double.infinity
-        var maxLon = -Double.infinity
-
-        for fieldMap in fieldMaps {
-            for coord in fieldMap.boundaries {
-                minLat = min(minLat, coord.latitude)
-                maxLat = max(maxLat, coord.latitude)
-                minLon = min(minLon, coord.longitude)
-                maxLon = max(maxLon, coord.longitude)
-            }
-        }
-
-        let center = CLLocationCoordinate2D(
-            latitude: (minLat + maxLat) / 2,
-            longitude: (minLon + maxLon) / 2
-        )
-
-        let span = MKCoordinateSpan(
-            latitudeDelta: (maxLat - minLat) * 1.3,
-            longitudeDelta: (maxLon - minLon) * 1.3
-        )
-
-        region = MKCoordinateRegion(center: center, span: span)
-        mapView?.setRegion(region, animated: true)
+        // TODO: Fetch geometry data to calculate bounds
+        print("Zoom to fit all - geometry data needed")
     }
 
     func zoomToField(_ fieldMap: FieldMap) {
-        var minLat = Double.infinity
-        var maxLat = -Double.infinity
-        var minLon = Double.infinity
-        var maxLon = -Double.infinity
-
-        for coord in fieldMap.boundaries {
-            minLat = min(minLat, coord.latitude)
-            maxLat = max(maxLat, coord.latitude)
-            minLon = min(minLon, coord.longitude)
-            maxLon = max(maxLon, coord.longitude)
-        }
-
-        let center = CLLocationCoordinate2D(
-            latitude: (minLat + maxLat) / 2,
-            longitude: (minLon + maxLon) / 2
-        )
-
-        let span = MKCoordinateSpan(
-            latitudeDelta: (maxLat - minLat) * 1.5,
-            longitudeDelta: (maxLon - minLon) * 1.5
-        )
-
-        let newRegion = MKCoordinateRegion(center: center, span: span)
-        mapView?.setRegion(newRegion, animated: true)
+        // TODO: Fetch geometry data for this field
+        print("Zoom to field: \(fieldMap.name) - geometry data needed")
     }
 
     func toggleMapType() {
@@ -270,11 +211,13 @@ struct MapViewRepresentable: UIViewRepresentable {
         viewModel.mapView = mapView
 
         // Add field overlays
+        // TODO: Add field overlays when geometry data is available
+        /*
         for fieldMap in viewModel.fieldMaps {
             let overlay = FieldMapOverlay(fieldMap: fieldMap)
             mapView.addOverlay(overlay)
         }
-
+        */
         // Zoom to fit all fields
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             viewModel.zoomToFitAll()
@@ -301,7 +244,10 @@ struct MapViewRepresentable: UIViewRepresentable {
         }
 
         // Render field boundaries
+        // TODO: Implement when geometry data is available
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+            // TODO: Implement FieldMapOverlay rendering when we have geometry data
+            /*
             if let fieldOverlay = overlay as? FieldMapOverlay {
                 let renderer = MKPolygonRenderer(
                     polygon: MKPolygon(
@@ -314,6 +260,7 @@ struct MapViewRepresentable: UIViewRepresentable {
                 renderer.lineWidth = 2
                 return renderer
             }
+            */
             return MKOverlayRenderer(overlay: overlay)
         }
 
@@ -325,8 +272,6 @@ struct MapViewRepresentable: UIViewRepresentable {
         }
     }
 }
-
-// MARK: - Preview
 
 struct FieldMapsMapView_Previews: PreviewProvider {
     static var previews: some View {

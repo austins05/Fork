@@ -1,120 +1,175 @@
 # Rotorsync
 
-Agricultural aviation iPad application with real-time engine monitoring via USB.
+Professional agricultural aviation iPad application featuring real-time engine monitoring via USB and comprehensive field management with Tabula API integration.
 
 ## Features
 
-### PeerTalk USB Engine Monitoring
-- **Professional engine display** with vertical CHT/EGT bar graphs for all 6 cylinders
-- **Real-time temperature updates** from Raspberry Pi via USB
-- **Adaptive theming** - Light mode by default, dark mode when system is in dark mode
-- **Color-coded warning zones** with smooth gradients:
-  - CHT: Green (normal) → Amber (480-499°F) → Red (≥500°F)
-  - EGT: Blue (normal) → Amber (1650-1679°F) → Red (≥1680°F)
-- **Visual threshold indicators** - Red lines on bars at danger thresholds
-- **Temperature difference monitoring**:
-  - EGT MAX DIFF turns red when ≥100°F difference between cylinders
-  - CHT MAX DIFF turns red when ≥70°F difference between cylinders
-- **Map overlay** - Draggable, resizable temperature graph on map view
-- **Live statistics**: Max CHT, Max EGT, cylinder count
+### 🌡️ PeerTalk USB Engine Monitoring
+- **Garmin G1000-style display** with alternating CHT/EGT vertical bar graphs
+- Real-time temperature updates from Raspberry Pi via USB connection
+- 12 temperature sensors (6 CHT + 6 EGT cylinders)
+- Color-coded warning zones (normal/warning/danger)
+- Live statistics: Max CHT, Max EGT, Average temperatures
 
-### Temperature Display Features
-- **Layout**: EGT value (top, blue) → Cylinder number → Side-by-side bars → CHT value (bottom, green)
-- **Full-range scaling**: CHT 0-550°F, EGT 0-1800°F
-- **Connection status**: Minimized banner when disconnected, data remains visible at 60% opacity
-- **12 temperature sensors**: 6 CHT + 6 EGT cylinders
-- **Horizontal scrolling** for comfortable viewing of all cylinders
+### 🗺️ Tabula Field Management Integration
+- **Customer Search**: Multi-select customer search with bulk import
+- **Field Maps**: Import and display field maps from Tabula API
+- **Job Management**: View job details, status, and order information
+- **Apple Maps Integration**: Field boundary visualization
+- **Backend Proxy**: Secure Node.js backend at 192.168.68.226:3000
+- **Source Tracking**: Distinguish between Tabula and MPZ Field Mapper fields
 
-### Map Temperature Overlay
-- **Positioning**: Four preset corners (Top Left, Top Right, Bottom Left, Bottom Right)
-- **Resizable**: Slider control (0.7x - 1.5x scale)
-- **Draggable**: Move anywhere on screen via header
-- **Toggleable**: On/off control in map settings
-- **Status indicator**: Green dot when connected, orange when searching
-
-### Field Management
-- Import and display field maps from Tabula API
-- Customer search with multi-select
-- Bulk field map import
-- Apple Maps integration with field boundary overlays
-- Interactive field selection and details
-
-### Pin & Group Management
-- Drop custom pins on map
+### 📍 Pin & Group Management
+- Drop custom pins on map with icons and notes
 - Organize pins in folders and groups
-- KML import/export
+- KML import/export support
 - Real-time collaboration via MQTT
-- Share pins across devices
+- Share pins across devices and teams
 
 ## Architecture
 
 ### iOS App (Swift/SwiftUI)
 - **PeerTalk Integration**: USB communication with Raspberry Pi
+- **Tabula Integration**: Field map management via backend proxy
 - **Combine Framework**: Reactive data flow
-- **SwiftUI Environment**: Adaptive color schemes
-- **Core Data**: Local persistence
-- **MQTT**: Real-time sync
-- **MapKit**: Field and pin visualization
+- **Core Data**: Local persistence for pins and folders
+- **MQTT**: Real-time synchronization
+- **MapKit**: Field boundary and pin visualization
 
-### Backend (Node.js/Express)
-- Tabula API proxy for field maps
-- Customer search endpoints
-- Rate limiting and security
+### Backend API (Node.js/Express)
+- **Location**: 192.168.68.226:3000
+- **Tabula API Proxy**: Customer search, field map retrieval
+- **Endpoints**: 
+  - `/health` - Health check
+  - `/api/customers/search` - Customer search
+  - `/api/field-maps/customer/:id` - Get field maps
+  - `/api/field-maps/bulk` - Bulk field map retrieval
+  - `/api/field-maps/:id/download` - GeoJSON geometry download
+- **Security**: Rate limiting, CORS, error handling
+- **Process Management**: PM2 for production deployment
 
 ### Raspberry Pi (Python)
-- SMTC thermocouple reading (I2C)
-- PeerTalk frame transmission
+- SMTC thermocouple reading via I2C
+- PeerTalk frame transmission to iPad
 - Port forwarding via iproxy
 
-## PeerTalk Engine Monitor
+## Tabula Integration Details
 
-### Display Layout
-The monitor displays all 6 cylinders in a horizontal scrollable view with:
-- **EGT temperature** (blue number at top)
-- **Cylinder number** (centered in labeled box)
-- **Dual bars** (CHT green on left, EGT blue on right)
-- **CHT temperature** (green number at bottom)
+### Architecture Flow
+```
+iOS App (Rotorsync) → Backend API (192.168.68.226:3000) → Tabula API (test-api.tracmap.com)
+```
 
-### Temperature Thresholds & Scaling
+### iOS Components
 
-#### CHT (Cylinder Head Temperature)
-- **Scale**: 0-550°F (full range)
-- **Warning**: 480°F (amber color)
-- **Danger**: 500°F (red color + red threshold line)
-- **MAX DIFF Alert**: Red indicator when cylinder spread ≥70°F
+#### Models (`Rotorsync/Terralink/Models/`)
+- **FieldMapModels.swift**: Customer and FieldMap models
+  - `Customer`: Customer data with ID, name, contact info
+  - `FieldMap`: Job data (id, name, customer, area, status, orderNumber, etc.)
+  - Response models for API communication
 
-#### EGT (Exhaust Gas Temperature)
-- **Scale**: 0-1800°F (full range)
-- **Warning**: 1650°F (amber color)
-- **Danger**: 1680°F (red color + red threshold line)
-- **MAX DIFF Alert**: Red indicator when cylinder spread ≥100°F
+#### Services (`Rotorsync/Terralink/Services/`)
+- **TabulaAPIService.swift**: API communication layer
+  - Singleton pattern for shared instance
+  - Customer search
+  - Field map retrieval (single and bulk)
+  - GeoJSON geometry fetching
+  - Error handling and logging
 
-### Visual Warning System
-1. **Normal Operation**: Bars display in their base color (CHT green, EGT blue)
-2. **Warning Zone**: Bars turn amber when approaching limits
-3. **Danger Zone**: Bars turn red when exceeding thresholds
-4. **Red Lines**: Horizontal indicator at danger threshold on each bar
-5. **MAX DIFF**: White text on red background when cylinder spread exceeds limits
+- **SharedFieldStorage.swift**: Field persistence
+  - Track field source (Tabula vs MPZ)
+  - UserDefaults persistence
+  - Duplicate prevention
+
+#### Views (`Rotorsync/Terralink/Views/`)
+- **FieldMapsManagementView.swift**: Main field management UI
+  - Customer selection chips
+  - Field map list with status indicators
+  - Import functionality
+
+- **CustomerSearchView.swift**: Customer search interface
+  - Real-time search
+  - Multi-select support
+  - Integration with FieldMapsViewModel
+
+- **FieldMapPreviewView.swift**: Individual field preview
+  - Field details display
+  - Geometry visualization
+  - Action buttons
+
+- **FieldMapsMapView.swift**: Map visualization
+  - Apple Maps integration
+  - Field boundary overlays (requires geometry)
+  - Interactive field selection
+
+- **FieldMapsViewModel.swift**: Business logic
+  - Customer and field map management
+  - API communication
+  - State management
+
+### Backend Components (`backend/`)
+
+#### Configuration
+- **src/config/tabula.js**: Tabula API configuration
+  - Base URL: https://test-api.tracmap.com/v1
+  - Token-based authentication
+  - Environment variable management
+
+#### Services
+- **src/services/tabulaService.js**: Tabula API integration
+  - Customer search
+  - Job listing by customer
+  - GeoJSON geometry retrieval
+  - Error handling and logging
+
+#### Routes
+- **src/routes/customers.js**: Customer endpoints
+  - Search with pagination
+  - Customer details
+
+- **src/routes/fieldMaps.js**: Field map endpoints
+  - Single customer field maps
+  - Bulk retrieval
+  - Geometry download
+
+#### Middleware
+- **src/middleware/errorHandler.js**: Centralized error handling
+- Rate limiting: 100 requests per 15 minutes per IP
+
+## Temperature Monitor Technical Details
+
+### Display Specifications
+- **CHT Thresholds**: 450°F danger, 420°F warning (250-500°F scale)
+- **EGT Thresholds**: 1650°F danger, 1550°F warning (1200-1700°F scale)
+- **Update Rate**: Real-time via USB
+- **Color Coding**: Green (normal), Yellow (warning), Red (danger)
 
 ### PeerTalk Protocol
-- **Frame Format**: version (UInt32), type (UInt32), tag (UInt32), payloadSize (UInt32)
-- **Network Byte Order**: Big-endian for all header fields
-- **Frame Type**: 100 for temperature data
-- **Payload**: JSON with 6 CHT + 6 EGT readings
+- **Port**: 2345
+- **Frame Format**: Header + JSON payload
+- **Network Byte Order**: Big-endian
+- **Payload Structure**: 
+  ```json
+  {
+    "cht": [temp1, temp2, temp3, temp4, temp5, temp6],
+    "egt": [temp1, temp2, temp3, temp4, temp5, temp6]
+  }
+  ```
 
 ## Setup
 
 ### Prerequisites
-- iOS 16.0+
+- iOS 17.6+
 - Xcode 15+
-- Raspberry Pi with SMTC thermocouples
+- Raspberry Pi with SMTC thermocouples (for engine monitoring)
 - Node.js 18+ (for backend)
+- macOS for iOS development
 
 ### iOS App Installation
 
 1. **Clone Repository**
    ```bash
-   git clone https://github.com/austins05/Fork.git
+   git clone git@github.com:austins05/Fork.git
    cd Fork
    ```
 
@@ -123,30 +178,77 @@ The monitor displays all 6 cylinders in a horizontal scrollable view with:
    open Rotorsync.xcodeproj
    ```
 
-3. **Configure PeerTalk**
-   - Ensure `Rotorsync/PeerTalk/` folder contains PeerTalk framework
-   - Check bridging header: `Rotorsync/Rotorsync-Bridging-Header.h`
+3. **Configure Signing**
+   - Select Rotorsync target
+   - Update bundle identifier
+   - Configure signing team
 
 4. **Build & Run**
    - Select iPad as target device
    - Press ⌘R to build and deploy
 
-### Raspberry Pi Setup
+### Backend API Setup
+
+1. **SSH to Backend VM**
+   ```bash
+   ssh user@192.168.68.226
+   ```
+
+2. **Navigate to Backend Directory**
+   ```bash
+   cd ~/terralink-backend
+   ```
+
+3. **Install Dependencies**
+   ```bash
+   npm install
+   ```
+
+4. **Configure Environment**
+   ```bash
+   cp .env.example .env
+   nano .env
+   ```
+   
+   Update with Tabula API credentials:
+   ```
+   TABULA_API_URL=https://test-api.tracmap.com/v1
+   TABULA_API_KEY=your_api_key
+   TABULA_API_SECRET=your_api_secret
+   PORT=3000
+   NODE_ENV=production
+   ```
+
+5. **Start with PM2**
+   ```bash
+   pm2 start src/index.js --name terralink-backend
+   pm2 save
+   pm2 startup
+   ```
+
+6. **Verify Deployment**
+   ```bash
+   curl http://192.168.68.226:3000/health
+   pm2 status
+   pm2 logs terralink-backend
+   ```
+
+### Raspberry Pi Setup (Engine Monitoring)
 
 1. **Install Dependencies**
    ```bash
-   sudo apt update
-   sudo apt install -y libimobiledevice-utils usbmuxd python3-pip
+   sudo apt-get update
+   sudo apt-get install python3-smbus python3-pip libimobiledevice-utils
    pip3 install smbus2
    ```
 
 2. **Deploy Temperature Daemon**
    ```bash
-   # Copy peertalk_temp_sender.py to /home/pi/
-   python3 ~/peertalk_temp_sender.py
+   sudo cp temperature_daemon.py /usr/local/bin/
+   sudo chmod +x /usr/local/bin/temperature_daemon.py
    ```
 
-3. **Connect iPad via USB**
+3. **Connect iPad**
    - Plug iPad into Raspberry Pi USB port
    - On iPad: Trust this computer
    - Pi will automatically detect and connect
@@ -156,116 +258,122 @@ The monitor displays all 6 cylinders in a horizontal scrollable view with:
    iproxy 2345 2345 &
    ```
 
-### Backend API Setup
-
-1. **Install Dependencies**
-   ```bash
-   cd backend
-   npm install
-   ```
-
-2. **Configure Environment**
-   ```bash
-   cp .env.example .env
-   # Edit .env with Tabula API credentials
-   ```
-
-3. **Deploy to VM**
-   ```bash
-   ./deploy.sh
-   ```
-
 ## File Structure
 
 ```
 Rotorsync/
-├── Features/
-│   ├── Monitor/
-│   │   └── Views/
-│   │       └── MonitorView.swift            # Professional engine display
-│   ├── Map/
-│   │   └── Views/
-│   │       └── Components/
-│   │           ├── TemperatureGraphOverlay.swift  # Map overlay
-│   │           └── OverlaySettingsView.swift      # Overlay controls
-│   ├── FileManager/                          # File/folder management
-│   └── Groups/                               # Collaboration
-├── Services/
-│   └── TemperatureService.swift              # PeerTalk integration
-├── PeerTalk/                                 # USB communication framework
-│   ├── PTChannel.m
-│   ├── PTProtocol.m
-│   └── PTUSBHub.m
-├── Terralink/                                # Tabula field maps
-├── Core/
-│   ├── Database/                             # Core Data
-│   ├── Networking/                           # API & MQTT
-│   └── Managers/                             # Location, etc.
-└── Models/                                   # Data models
+├── Rotorsync.xcodeproj         # Xcode project
+├── Rotorsync/
+│   ├── Core/                   # Core services
+│   │   ├── Managers/          # Location, MQTT managers
+│   │   ├── Networking/        # API services
+│   │   └── Database/          # Core Data models
+│   ├── Features/              # Feature modules
+│   │   ├── Map/              # Map view and utilities
+│   │   ├── Pins/             # Pin management
+│   │   ├── Groups/           # Group functionality
+│   │   ├── Monitor/          # Engine temperature monitoring
+│   │   └── Authentication/   # Login/auth
+│   ├── Terralink/            # Tabula integration
+│   │   ├── Models/           # Data models
+│   │   ├── Services/         # API services
+│   │   └── Views/            # UI components
+│   ├── Models/               # Shared models
+│   ├── Services/             # Shared services
+│   └── RotorsyncApp.swift    # App entry point
+├── backend/                   # Node.js backend (deployed to VM)
+│   ├── src/
+│   │   ├── config/           # Configuration
+│   │   ├── services/         # Tabula API service
+│   │   ├── routes/           # API routes
+│   │   ├── middleware/       # Express middleware
+│   │   └── index.js          # Server entry point
+│   ├── .env.example          # Environment template
+│   └── package.json          # Dependencies
+└── raspberry-pi/             # Raspberry Pi scripts
+    └── temperature_daemon.py # Temperature sensor daemon
 ```
 
-## Temperature Monitor Technical Details
+## API Endpoints
 
-### TemperatureService.swift
-- Singleton service managing PeerTalk connection
-- Listens on port 2345 for incoming frames
-- Decodes JSON temperature payload
-- Publishes data via `@Published` properties
-- Connection status monitoring
+### Backend API (192.168.68.226:3000)
 
-### MonitorView.swift
-- Professional engine monitor UI
-- Adaptive light/dark theming via `@Environment(\.colorScheme)`
-- EGT/CHT layout: number (top) → bars → number (bottom)
-- SwiftUI + Combine for reactive updates
-- Color-coded zones with gradient fills
-- Red threshold lines at danger levels
-- MAX DIFF indicators with conditional red highlighting
-
-### TemperatureGraphOverlay.swift
-- Compact temperature display for map view
-- Draggable via header gesture
-- Resizable via bottom-right handle
-- Four position presets with smooth animations
-- Size slider (0.7x to 1.5x)
-- Same color scheme and scaling as main monitor
-
-### Python Daemon (Raspberry Pi)
-```python
-# PeerTalk frame format
-frame_header = struct.pack('>IIII',
-    1,                    # version (PTProtocolVersion1)
-    100,                  # type (temperature data)
-    0,                    # tag
-    len(payload_bytes))   # payloadSize
-
-# JSON payload
-{
-  "cht": [385, 390, 382, 388, 391, 387],  # °F
-  "egt": [1385, 1420, 1390, 1410, 1405, 1398],
-  "timestamp": 1699216123.45,
-  "unit": "F"
-}
+#### Health Check
+```
+GET /health
 ```
 
-## Temperature Monitoring Best Practices
+#### Customer Search
+```
+GET /api/customers/search?q=searchTerm&limit=50
+```
 
-### Normal Operation
-- CHT: 350-420°F typical cruise
-- EGT: 1350-1550°F typical cruise
-- MAX DIFF: <50°F for CHT, <75°F for EGT
+#### Field Maps
+```
+GET /api/field-maps/customer/:customerId
+POST /api/field-maps/bulk
+  Body: { "customerIds": ["id1", "id2"] }
+GET /api/field-maps/:fieldId/download?format=geojson
+```
 
-### Warning Conditions
-- **Amber Alert**: CHT 480-499°F or EGT 1650-1679°F
-- **Action**: Reduce power, increase cooling
+## Testing
 
-### Danger Conditions
-- **Red Alert**: CHT ≥500°F or EGT ≥1680°F
-- **Action**: Immediate power reduction, prepare for landing
+### Backend Testing
+```bash
+# Health check
+curl http://192.168.68.226:3000/health
 
-### Cylinder Imbalance
-- **CHT spread ≥70°F**: Possible cooling issue, fouled plug, or mixture imbalance
-- **EGT spread ≥100°F**: Possible induction leak, fuel flow issue, or ignition problem
+# Search customers
+curl "http://192.168.68.226:3000/api/customers/search?q=test"
+
+# Get field maps
+curl http://192.168.68.226:3000/api/field-maps/customer/5429
+```
+
+### iOS Testing
+1. Open Rotorsync on iPad
+2. Navigate to Field Maps tab
+3. Search for customers
+4. Select and import field maps
+5. Verify maps appear on the map view
+
+## Development
+
+### Adding New Features
+1. Create feature branch
+2. Implement changes
+3. Test thoroughly
+4. Update documentation
+5. Create pull request
+
+### Code Style
+- Swift: Follow Swift API Design Guidelines
+- Node.js: ESLint with standard configuration
+- Comments: Use /// for documentation
+
+## Troubleshooting
+
+### Backend Issues
+```bash
+# Check PM2 status
+pm2 status
+
+# View logs
+pm2 logs terralink-backend --lines 100
+
+# Restart service
+pm2 restart terralink-backend
+```
+
+### iOS Build Issues
+- Clean build folder: Shift + ⌘K
+- Clear derived data: ~/Library/Developer/Xcode/DerivedData
+- Verify provisioning profiles
+
+### Temperature Monitor Not Connecting
+- Verify iPad is trusted on Raspberry Pi
+- Check iproxy is running: `ps aux | grep iproxy`
+- Verify PeerTalk port: `lsof -i :2345`
 
 ## Contributing
 
@@ -283,20 +391,7 @@ Proprietary - All Rights Reserved
 
 For issues or questions, please open a GitHub issue.
 
-## Changelog
-
-### Latest Updates
-- ✅ Adaptive light/dark theme support
-- ✅ Temperature graph map overlay with drag/resize
-- ✅ Updated temperature thresholds (CHT: 480/500°F, EGT: 1650/1680°F)
-- ✅ Full-range temperature scaling (CHT: 0-550°F, EGT: 0-1800°F)
-- ✅ Red threshold lines on temperature bars
-- ✅ MAX DIFF indicators with alert thresholds
-- ✅ Color scheme update (EGT blue, CHT green)
-- ✅ Minimized connection error display
-- ✅ Professional layout with numbers top and bottom
-
 ---
 
-**Generated with Claude Code**
+**Built with Claude Code**  
 https://claude.com/claude-code

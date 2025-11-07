@@ -10,9 +10,17 @@ struct FieldData: Identifiable, Codable {
     let category: String?
     let application: String?
     let description: String?
+    let source: FieldSource? // Track where field came from
+    
+    // Source tracking for fields
+    enum FieldSource: String, Codable {
+        case tabula = "tabula"  // From Tabula API
+        case mpz = "mpz"        // From MPZ Field Mapper
+    }
 
     init(id: Int, name: String, coordinates: [CLLocationCoordinate2D], acres: Double,
-         color: String, category: String?, application: String?, description: String?) {
+         color: String, category: String?, application: String?, description: String?,
+         source: FieldSource? = nil) {
         self.id = id
         self.name = name
         self.coordinates = coordinates
@@ -21,10 +29,11 @@ struct FieldData: Identifiable, Codable {
         self.category = category
         self.application = application
         self.description = description
+        self.source = source
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, acres, color, category, application, description
+        case id, name, acres, color, category, application, description, source
         case coordinates
     }
 
@@ -42,6 +51,7 @@ struct FieldData: Identifiable, Codable {
         category = try c.decodeIfPresent(String.self, forKey: .category)
         application = try c.decodeIfPresent(String.self, forKey: .application)
         description = try c.decodeIfPresent(String.self, forKey: .description)
+        source = try c.decodeIfPresent(FieldSource.self, forKey: .source)
         let coords = try c.decode([Coordinate].self, forKey: .coordinates)
         coordinates = coords.map { CLLocationCoordinate2D(latitude: $0.latitude,
                                                          longitude: $0.longitude) }
@@ -56,6 +66,7 @@ struct FieldData: Identifiable, Codable {
         try c.encodeIfPresent(category, forKey: .category)
         try c.encodeIfPresent(application, forKey: .application)
         try c.encodeIfPresent(description, forKey: .description)
+        try c.encodeIfPresent(source, forKey: .source)
         let coords = coordinates.map { Coordinate(latitude: $0.latitude,
                                                   longitude: $0.longitude) }
         try c.encode(coords, forKey: .coordinates)

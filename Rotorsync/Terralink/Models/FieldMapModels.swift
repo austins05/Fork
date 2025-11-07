@@ -28,64 +28,39 @@ struct Customer: Identifiable, Codable, Hashable {
     }
 }
 
-// MARK: - Field Map Model
+// MARK: - Field Map Model (Tabula Job)
 
 struct FieldMap: Identifiable, Codable {
-    let id: String
-    let customerId: String
+    let id: Int
     let name: String
-    let description: String?
-    let area: Double? // in hectares or acres
-    let boundaries: [Coordinate]
-    let center: Coordinate?
-    let metadata: FieldMapMetadata?
-    let createdAt: Date?
-    let updatedAt: Date?
-
+    let customer: String
+    let area: Double
+    let status: String
+    let orderNumber: String
+    let requestedUrl: String
+    let workedUrl: String
+    let modifiedDate: Int
+    let productList: String
+    let address: String
+    let notes: String
+    let deleted: Bool
+    let rts: Bool
+    
     enum CodingKeys: String, CodingKey {
         case id
-        case customerId = "customer_id"
         case name
-        case description
+        case customer
         case area
-        case boundaries
-        case center
-        case metadata
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
-    }
-}
-
-// MARK: - Coordinate
-
-struct Coordinate: Codable, Hashable {
-    let latitude: Double
-    let longitude: Double
-
-    enum CodingKeys: String, CodingKey {
-        case latitude = "lat"
-        case longitude = "lon"
-    }
-
-    // Convert to CLLocationCoordinate2D for MapKit
-    var clCoordinate: CLLocationCoordinate2D {
-        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-    }
-}
-
-// MARK: - Field Map Metadata
-
-struct FieldMapMetadata: Codable {
-    let cropType: String?
-    let season: String?
-    let lastActivity: Date?
-    let notes: String?
-
-    enum CodingKeys: String, CodingKey {
-        case cropType = "crop_type"
-        case season
-        case lastActivity = "last_activity"
+        case status
+        case orderNumber
+        case requestedUrl
+        case workedUrl
+        case modifiedDate
+        case productList
+        case address
         case notes
+        case deleted
+        case rts
     }
 }
 
@@ -124,7 +99,8 @@ class FieldMapAnnotation: NSObject, MKAnnotation {
     let fieldMap: FieldMap
 
     var coordinate: CLLocationCoordinate2D {
-        fieldMap.center?.clCoordinate ?? CLLocationCoordinate2D(latitude: 0, longitude: 0)
+        // We'll get this from geometry data
+        CLLocationCoordinate2D(latitude: 0, longitude: 0)
     }
 
     var title: String? {
@@ -132,50 +108,10 @@ class FieldMapAnnotation: NSObject, MKAnnotation {
     }
 
     var subtitle: String? {
-        if let area = fieldMap.area {
-            return String(format: "%.2f acres", area)
-        }
-        return nil
+        String(format: "%.2f acres", fieldMap.area)
     }
 
     init(fieldMap: FieldMap) {
         self.fieldMap = fieldMap
-    }
-}
-
-// MARK: - Map Overlay
-
-class FieldMapOverlay: NSObject, MKOverlay {
-    let fieldMap: FieldMap
-    let coordinates: [CLLocationCoordinate2D]
-    let boundingMapRect: MKMapRect
-
-    var coordinate: CLLocationCoordinate2D {
-        boundingMapRect.origin.coordinate
-    }
-
-    init(fieldMap: FieldMap) {
-        self.fieldMap = fieldMap
-        self.coordinates = fieldMap.boundaries.map { $0.clCoordinate }
-
-        // Calculate bounding rect
-        var rect = MKMapRect.null
-        for coord in coordinates {
-            let point = MKMapPoint(coord)
-            let pointRect = MKMapRect(x: point.x, y: point.y, width: 0, height: 0)
-            rect = rect.union(pointRect)
-        }
-        self.boundingMapRect = rect
-
-        super.init()
-    }
-}
-
-// MARK: - Helper Extensions
-
-extension MKMapRect {
-    var coordinate: CLLocationCoordinate2D {
-        let center = MKMapPoint(x: midX, y: midY)
-        return center.coordinate
     }
 }

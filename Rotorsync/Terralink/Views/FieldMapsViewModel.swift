@@ -77,13 +77,13 @@ class FieldMapsViewModel: ObservableObject {
 
     /// Refresh field maps for all imported maps
     func refreshFieldMaps() async {
-        guard !fieldMaps.isEmpty else { return }
+        guard !selectedCustomers.isEmpty else { return }
 
         isLoading = true
         defer { isLoading = false }
 
-        // Get unique customer IDs from current field maps
-        let customerIds = Array(Set(fieldMaps.map { $0.customerId }))
+        // Use the selected customers to refresh (they have the IDs)
+        let customerIds = selectedCustomers.map { $0.id }
 
         do {
             let maps = try await apiService.getFieldMapsForCustomers(customerIds: customerIds)
@@ -106,7 +106,8 @@ class FieldMapsViewModel: ObservableObject {
 
     /// Get field maps for a specific customer
     func getFieldMaps(for customer: Customer) -> [FieldMap] {
-        return fieldMaps.filter { $0.customerId == customer.id }
+        // Filter by customer name since field maps don't store customer ID
+        return fieldMaps.filter { $0.customer == customer.name }
     }
 
     /// Check backend health

@@ -9,9 +9,12 @@ import Foundation
 import Combine
 
 class TabulaAPIService: ObservableObject {
+    // MARK: - Singleton
+    
+    static let shared = TabulaAPIService()
+    
     // MARK: - Configuration
 
-    // TODO: Update this with the actual backend URL once deployed
     private let baseURL = "http://192.168.68.226:3000/api"
 
     private let session: URLSession
@@ -169,6 +172,37 @@ class TabulaAPIService: ObservableObject {
         }
 
         return fieldMap
+    }
+    
+    /// Get field geometry (GeoJSON) from backend
+    func getFieldGeometry(fieldId: String, type: String = "requested") async throws -> [String: Any] {
+        guard var components = URLComponents(string: "\(baseURL)/field-maps/\(fieldId)/download") else {
+            throw APIError.invalidURL
+        }
+
+        components.queryItems = [
+            URLQueryItem(name: "format", value: "geojson"),
+            URLQueryItem(name: "type", value: type)
+        ]
+
+        guard let url = components.url else {
+            throw APIError.invalidURL
+        }
+
+        let request = URLRequest(url: url)
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.invalidResponse
+        }
+
+        // Parse JSON response
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw APIError.apiError("Failed to parse geometry JSON")
+        }
+
+        return json
     }
 
     /// Download field map in specific format

@@ -179,6 +179,8 @@ struct CustomerChip: View {
 
 // MARK: - Field Map Row
 
+// MARK: - Field Map Row
+
 struct FieldMapRow: View {
     let fieldMap: FieldMap
 
@@ -188,22 +190,26 @@ struct FieldMapRow: View {
                 Text(fieldMap.name)
                     .font(.headline)
 
-                if let description = fieldMap.description {
-                    Text(description)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
+                // Show customer name
+                Text(fieldMap.customer)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
 
                 HStack(spacing: 12) {
-                    if let area = fieldMap.area {
-                        Label(String(format: "%.2f acres", area), systemImage: "grid")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+                    // Area
+                    Label(String(format: "%.2f acres", fieldMap.area), systemImage: "grid")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
 
-                    if let cropType = fieldMap.metadata?.cropType {
-                        Label(cropType, systemImage: "leaf")
+                    // Status
+                    Label(fieldMap.status.capitalized, systemImage: "checkmark.circle")
+                        .font(.caption)
+                        .foregroundColor(statusColor)
+                        
+                    // Order number if available
+                    if !fieldMap.orderNumber.isEmpty {
+                        Label("#\(fieldMap.orderNumber)", systemImage: "number")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -217,7 +223,15 @@ struct FieldMapRow: View {
         }
         .padding(.vertical, 4)
     }
-}
+    
+    private var statusColor: Color {
+        switch fieldMap.status.lowercased() {
+        case "complete": return .green
+        case "placed": return .blue
+        case "in progress", "assigned": return .orange
+        default: return .gray
+        }
+    }
 
 // MARK: - Preview
 
@@ -225,4 +239,5 @@ struct FieldMapsManagementView_Previews: PreviewProvider {
     static var previews: some View {
         FieldMapsManagementView()
     }
+}
 }
