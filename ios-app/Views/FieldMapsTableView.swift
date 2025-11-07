@@ -405,13 +405,11 @@ struct FilterTextField: View {
         TextField(placeholder, text: $text)
             .font(.system(size: 11))
             .textFieldStyle(PlainTextFieldStyle())
+            .frame(width: width - 16) // Subtract horizontal padding
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .background(Color(.systemBackground))
             .cornerRadius(4)
-            .frame(width: width)
-            .padding(.horizontal, 4)
-            .padding(.vertical, 4)
     }
 }
 
