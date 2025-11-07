@@ -8,6 +8,7 @@ struct MapRepresentable: UIViewRepresentable {
     @Binding var groupPins: [APIPin]
     @Binding var importedFields: [FieldData]
     @Binding var showImportedFields: Bool
+    @Binding var hoveredField: FieldData?
     @Binding var path: [CLLocationCoordinate2D]
     @Binding var mapStyle: AppMapStyle
     @Binding var userTrackingMode: MKUserTrackingMode
@@ -34,6 +35,13 @@ struct MapRepresentable: UIViewRepresentable {
         )
         longPress.minimumPressDuration = 0.5
         mv.addGestureRecognizer(longPress)
+        
+        // Add tap gesture for field selection
+        let tap = UITapGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleTap(_:))
+        )
+        mv.addGestureRecognizer(tap)
 
         return mv
     }
@@ -67,6 +75,10 @@ struct MapRepresentable: UIViewRepresentable {
                 if shouldForceUpdate {
                     // Force update from button press
                     print("🗺️ FORCING update from button press")
+                    
+                    // Reset interaction flag to allow this update and future programmatic updates
+                    context.coordinator.isUserInteracting = false
+                    
                     uiView.setRegion(region, animated: true)
                     
                     // Reset the flag after update
@@ -137,6 +149,26 @@ struct MapRepresentable: UIViewRepresentable {
             
             let pinName = "Pin \(parent.droppedPins.count + 1)"
             parent.onLongPressPinDropped(coord, pinName)
+        }
+        
+        @objc func handleTap(_ gesture: UITapGestureRecognizer) {
+            guard gesture.state == .ended else { return }
+            let mv = gesture.view as! MKMapView
+            let pt = gesture.location(in: mv)
+            let coord = mv.convert(pt, toCoordinateFrom: mv)
+            
+            // Check if tap is inside any field polygon
+            for field in parent.importedFields {
+                let polygon = MKPolygon(coordinates: field.coordinates, count: field.coordinates.count)
+                let renderer = MKPolygonRenderer(polygon: polygon)
+                let mapPoint = MKMapPoint(coord)
+                let rendererPoint = renderer.point(for: mapPoint)
+                
+                if renderer.path.contains(rendererPoint) {
+                    parent.onFieldTapped(field)
+                    return
+                }
+            }
         }
         
         func updateAnnotations(_ mapView: MKMapView, parent: MapRepresentable) {
@@ -273,9 +305,8 @@ struct MapRepresentable: UIViewRepresentable {
 
         
         func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
+            // User started interacting with map - block programmatic updates
             isUserInteracting = true
-            
-            interactionTimer?.invalidate()
         }
         
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
@@ -283,14 +314,39 @@ struct MapRepresentable: UIViewRepresentable {
             DispatchQueue.main.async {
                 self.parent.mapCenter = mapView.centerCoordinate
             }
-            
-            // Reset interaction flag after user stops moving map
-            interactionTimer?.invalidate()
-            interactionTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { [weak self] _ in
-                self?.isUserInteracting = false
-            }
-        }
 
+            // Note: We do NOT automatically reset isUserInteracting here
+            // This prevents unwanted auto-centering after user moves the map
+            // isUserInteracting will only be reset when shouldForceUpdate is triggered
+
+            // Check if zoomed in enough to show field details
+            let region = mapView.region
+            let zoomLevel = region.span.latitudeDelta
+
+            // Show field card when zoomed in close (smaller span = more zoomed in)
+            if zoomLevel < 0.01 {
+                let center = mapView.centerCoordinate
+
+                // Find field that contains the center point
+                for field in parent.importedFields {
+                    let polygon = MKPolygon(coordinates: field.coordinates, count: field.coordinates.count)
+                    let renderer = MKPolygonRenderer(polygon: polygon)
+                    let mapPoint = MKMapPoint(center)
+                    let rendererPoint = renderer.point(for: mapPoint)
+
+                    if renderer.path.contains(rendererPoint) {
+                        if parent.hoveredField?.id != field.id {
+                            parent.hoveredField = field
+                        }
+                        return
+                    }
+                }
+            }
+
+            // Not zoomed in enough or no field centered - hide card
+            parent.hoveredField = nil
+        }
+        
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
             guard !(annotation is MKUserLocation) else { return nil }
 
@@ -301,7 +357,7 @@ struct MapRepresentable: UIViewRepresentable {
                 if view == nil {
                     view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: id)
                     view?.canShowCallout = true
-                } else {
+                    view?.displayPriority = .required                } else {
                     view?.annotation = annotation
                     view?.subviews.forEach { subview in
                         if subview.tag == 999 {
@@ -375,6 +431,9 @@ struct MapRepresentable: UIViewRepresentable {
                 } else {
                     view?.annotation = annotation
                 }
+                
+                // Always show field pins at all zoom levels
+                view?.displayPriority = .required
                 
                 // Find field by ID and use its color
                 if let field = parent.importedFields.first(where: { $0.id == fieldId }) {

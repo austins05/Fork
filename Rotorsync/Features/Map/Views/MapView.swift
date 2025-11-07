@@ -28,6 +28,7 @@ struct MapView: View {
     @State private var selectedPinId: UUID?
     @State private var selectedGroupPin: APIPin?
     @State private var selectedDevice: Device?
+    @State private var hoveredField: FieldData?
 
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var isInitialLoad = true
@@ -118,6 +119,7 @@ struct MapView: View {
                 groupPins: $groupPins,
                 importedFields: $importedFields,
                 showImportedFields: $showImportedFields,
+                hoveredField: $hoveredField,
                 path: $path,
                 mapStyle: $mapStyle,
                 userTrackingMode: $userTrackingMode,
@@ -214,6 +216,18 @@ struct MapView: View {
                 presetPosition: $temperatureGraphPosition,
                 graphScale: $temperatureGraphScale
             )
+
+            // Field info card (auto-appears when zoomed in)
+            if let field = hoveredField {
+                VStack {
+                    Spacer()
+                    FieldInfoCard(field: field)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .padding(.bottom, 100)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .animation(.easeInOut(duration: 0.3), value: hoveredField?.id)
+            }
 
             bottomButtonsView()
         }

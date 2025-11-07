@@ -226,10 +226,21 @@ struct FieldMapsTableView: View {
             VStack(alignment: .leading, spacing: 0) {
                 // Header Row
                 HStack(spacing: 0) {
-                    Text("")
-                        .frame(width: 50, alignment: .leading)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 12)
+                    // Select All button
+                    Button(action: {
+                        if selectedJobs.count == filteredFieldMaps.count && !filteredFieldMaps.isEmpty {
+                            selectedJobs.removeAll()
+                        } else {
+                            selectedJobs = Set(filteredFieldMaps.map { $0.id })
+                        }
+                    }) {
+                        Image(systemName: selectedJobs.count == filteredFieldMaps.count && !filteredFieldMaps.isEmpty ? "checkmark.circle.fill" : "circle")
+                            .foregroundColor(selectedJobs.count == filteredFieldMaps.count && !filteredFieldMaps.isEmpty ? .blue : .gray)
+                            .font(.system(size: 20))
+                            .frame(width: 50)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 12)
+                    }
                     Divider()
                     TableHeaderCell(title: "Customer Name", width: 180)
                     Divider()
@@ -239,15 +250,15 @@ struct FieldMapsTableView: View {
                     Divider()
                     TableHeaderCell(title: "RTS", width: 80)
                     Divider()
-                    TableHeaderCell(title: "Requested Coverage Area (ha)", width: 180)
+                    TableHeaderCell(title: "Req. Area", width: 100)
                     Divider()
                     TableHeaderCell(title: "Status", width: 120)
                     Divider()
-                    TableHeaderCell(title: "prod dupli", width: 250)
+                    TableHeaderCell(title: "Prod Dupli", width: 120)
                     Divider()
                     TableHeaderCell(title: "Notes", width: 200)
                     Divider()
-                    TableHeaderCell(title: "Application Rate GPA", width: 150)
+                    TableHeaderCell(title: "App Rate", width: 100)
                     Divider()
                     TableHeaderCell(title: "Map Address", width: 200)
                 }
@@ -279,16 +290,16 @@ struct FieldMapsTableView: View {
                     Divider()
 
                     // Coverage Area Filter (supports: "2-3", ">5", "<10", or exact number)
-                    FilterTextField(text: $coverageAreaFilter, placeholder: "e.g. 2-3, >5, <10", width: 180)
+                    FilterTextField(text: $coverageAreaFilter, placeholder: "e.g. 2-3, >5, <10", width: 100)
                     Divider()
 
                     FilterTextField(text: $statusFilter, placeholder: "Filter this column...", width: 120)
                     Divider()
-                    FilterTextField(text: $productFilter, placeholder: "Filter this column...", width: 250)
+                    FilterTextField(text: $productFilter, placeholder: "Filter this column...", width: 120)
                     Divider()
                     FilterTextField(text: $notesFilter, placeholder: "Filter this column...", width: 200)
                     Divider()
-                    FilterTextField(text: $applicationRateFilter, placeholder: "Filter this column...", width: 150)
+                    FilterTextField(text: $applicationRateFilter, placeholder: "Filter this column...", width: 100)
                     Divider()
                     FilterTextField(text: $mapAddressFilter, placeholder: "Filter this column...", width: 200)
                 }
@@ -321,17 +332,17 @@ struct FieldMapsTableView: View {
                         Divider()
                         TableCell(text: "\(fieldMap.id)", width: 100)
                         Divider()
-                        TableCell(text: fieldMap.rts ? "Yes" : "No", width: 80, color: fieldMap.rts ? .green : .gray)
+                        TableCell(text: fieldMap.rts ? "Yes" : "No", width: 80, color: fieldMap.rts ? .green : .red)
                         Divider()
-                        TableCell(text: String(format: "%.2f", fieldMap.area), width: 180, alignment: .trailing)
+                        TableCell(text: String(format: "%.2f", fieldMap.area), width: 100, alignment: .trailing)
                         Divider()
                         TableCell(text: fieldMap.status.capitalized, width: 120, color: statusColor(for: fieldMap.status))
                         Divider()
-                        TableCell(text: fieldMap.prodDupli ?? "-", width: 250)
+                        TableCell(text: fieldMap.prodDupli ?? "-", width: 120)
                         Divider()
                         TableCell(text: fieldMap.notes.isEmpty ? "-" : fieldMap.notes, width: 200)
                         Divider()
-                        TableCell(text: "-", width: 150) // Application rate placeholder
+                        TableCell(text: "-", width: 100) // Application rate placeholder
                         Divider()
                         TableCell(text: fieldMap.address.isEmpty ? "-" : fieldMap.address, width: 200)
                     }
@@ -467,8 +478,8 @@ struct FieldMapsTableView: View {
                     "blue": "#0000FF",
                     "purple": "#9966FF",
                     "pink": "#FF69B4",
-                    "gray": "#808080",
-                    "grey": "#808080"
+                    "gray": "#404040",
+                    "grey": "#404040"
                 ]
                 
                 let name = colorName.lowercased().trimmingCharacters(in: CharacterSet.whitespaces)
@@ -487,8 +498,12 @@ struct FieldMapsTableView: View {
                     acres: job.area * 2.47105, // Convert hectares to acres
                     color: color,
                     category: job.status,
-                    application: job.productList,
-                    description: job.notes,
+                    application: nil,
+                    description: nil,
+                    prodDupli: job.prodDupli,
+                    productList: job.productList,
+                    notes: job.notes,
+                    address: job.address,
                     source: .tabula
                 )
                 fields.append(fieldData)
