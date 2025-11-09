@@ -19,6 +19,9 @@ struct FieldMapsTableView: View {
     @State private var showDashSettings = false
     @State private var showColorWarning = false
     @State private var colorWarningMessage = ""
+    @State private var previewJob: TabulaJob? = nil
+    @State private var showPreview = false
+    @State private var showPreviewAll = false
 
     // Filter states
     @State private var customerFilter = ""
@@ -114,82 +117,124 @@ struct FieldMapsTableView: View {
             .sheet(isPresented: $showDashSettings) {
                 TerralinkSettingsView()
             }
+            .sheet(isPresented: $showPreview) {
+                if let job = previewJob {
+                    FieldMapPreviewSheet(job: job) {
+                        // Import this single job
+                        selectedJobs.insert(job.id)
+                        Task {
+                            await importSelectedToMap()
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showPreviewAll) {
+                FieldMapPreviewAllSheet(jobs: filteredFieldMaps) {
+                    // Import all filtered fields
+                    selectedJobs = Set(filteredFieldMaps.map { $0.id })
+                    Task {
+                        await importSelectedToMap()
+                    }
+                }
+            }
         }
         .navigationViewStyle(StackNavigationViewStyle())
     }
 
+    var selectedAcres: Double {
+        let selectedFieldMaps = viewModel.fieldMaps.filter { selectedJobs.contains($0.id) }
+        return selectedFieldMaps.reduce(0) { $0 + ($1.area * 2.47105) }
+    }
+
     private var selectionToolbar: some View {
-        HStack {
-            Text("\(selectedJobs.count) selected")
-                .font(.headline)
+        HStack(alignment: .center, spacing: 0) {
+            HStack(spacing: 8) {
+                Text("\(selectedJobs.count) selected")
+                    .font(.headline)
+
+                if selectedJobs.count > 0 {
+                    Text("•")
+                        .foregroundColor(.secondary)
+                    Text(String(format: "%.2f acres", selectedAcres))
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.trailing, 16)
 
             Spacer()
 
-            Button(action: {
-                Task {
-                    await importSelectedToMap()
-                }
-            }) {
-                HStack {
-                    Image(systemName: "map.fill")
-                    Text("Import to Map")
-                }
-                .font(.subheadline)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(8)
-            }
-            .disabled(viewModel.isLoading)
-
-            Button(action: {
-                // Reset all filters
-                customerFilter = ""
-                contractorFilter = ""
-                orderIdFilter = ""
-                rtsFilter = "All"
-                coverageAreaFilter = ""
-                statusFilter = "All"
-                productFilter = ""
-                notesFilter = ""
-                applicationRateFilter = ""
-                mapAddressFilter = ""
-            }) {
-                Text("Reset Filters")
+            HStack(spacing: 8) {
+                Button(action: {
+                    Task {
+                        await importSelectedToMap()
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: "map.fill")
+                        Text("Import to Map")
+                    }
                     .font(.subheadline)
-            }
-            .padding(.leading, 8)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                }
+                .disabled(viewModel.isLoading)
+                .fixedSize()
 
-            Button(action: {
-                selectedJobs.removeAll()
-            }) {
-                Text("Clear")
+                Button(action: {
+                    // Reset all filters
+                    customerFilter = ""
+                    contractorFilter = ""
+                    orderIdFilter = ""
+                    rtsFilter = "All"
+                    coverageAreaFilter = ""
+                    statusFilter = "All"
+                    productFilter = ""
+                    notesFilter = ""
+                    applicationRateFilter = ""
+                    mapAddressFilter = ""
+                }) {
+                    HStack {
+                        Image(systemName: "arrow.counterclockwise.circle.fill")
+                        Text("Reset Filters")
+                    }
                     .font(.subheadline)
-            }
-            .padding(.leading, 8)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.orange)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                }
+                .fixedSize()
 
-            Button(action: {
-                FieldGeometryCache.shared.clearCache()
-                print("🗑️ Cache cleared manually")
-            }) {
-                HStack(spacing: 4) {
-                    Image(systemName: "trash.fill")
-                    Text("Clear Cache")
-                        .font(.subheadline)
+                Button(action: {
+                    selectedJobs.removeAll()
+                }) {
+                    HStack {
+                        Image(systemName: "xmark.circle.fill")
+                        Text("Clear Selected")
+                    }
+                    .font(.subheadline)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.red)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                }
+                .fixedSize()
+
+                Button(action: {
+                    showDashSettings = true
+                }) {
+                    Image(systemName: "gearshape.fill")
+                        .font(.title2)
+                        .foregroundColor(.blue)
+                        .frame(height: 28)
                 }
             }
-            .padding(.leading, 8)
-            .foregroundColor(.red)
-
-            Button(action: {
-                showDashSettings = true
-            }) {
-                Image(systemName: "gearshape.fill")
-                    .font(.title2)
-                    .foregroundColor(.blue)
-            }
-            .padding(.leading, 8)
         }
         .padding()
         .background(Color(.systemGray6))
@@ -344,19 +389,33 @@ struct FieldMapsTableView: View {
                             .padding(.vertical, 12)
                     }
                     Divider()
+
+                    // Preview All button
+                    Button(action: {
+                        print("👁️ Preview All button tapped - \(filteredFieldMaps.count) fields")
+                        showPreviewAll = true
+                    }) {
+                        Image(systemName: "eye.circle.fill")
+                            .foregroundColor(.blue)
+                            .font(.system(size: 20))
+                            .frame(width: 40)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 12)
+                    }
+                    Divider()
                     TableHeaderCell(title: "Customer Name", width: 180)
                     Divider()
                     TableHeaderCell(title: "Contractor Name", width: 180)
                     Divider()
-                    TableHeaderCell(title: "Order ID", width: 100)
+                    TableHeaderCell(title: "Order ID", width: 70)
                     Divider()
-                    TableHeaderCell(title: "RTS", width: 80)
+                    TableHeaderCell(title: "RTS", width: 50)
                     Divider()
-                    TableHeaderCell(title: "Req. Area", width: 100)
+                    TableHeaderCell(title: "Req. Area", width: 80)
                     Divider()
-                    TableHeaderCell(title: "Status", width: 120)
+                    TableHeaderCell(title: "Status", width: 90)
                     Divider()
-                    TableHeaderCell(title: "Prod Dupli", width: 120)
+                    TableHeaderCell(title: "Prod Dupli", width: 100)
                     Divider()
                     TableHeaderCell(title: "Notes", width: 200)
                     Divider()
@@ -376,19 +435,25 @@ struct FieldMapsTableView: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 6)
                     Divider()
+                    // Preview column space
+                    Color.clear
+                        .frame(width: 40)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 6)
+                    Divider()
                     FilterTextField(text: $customerFilter, placeholder: "Filter this column...", width: 180, suggestions: customerSuggestions)
                     Divider()
                     FilterTextField(text: $contractorFilter, placeholder: "Filter this column...", width: 180, suggestions: contractorSuggestions)
                     Divider()
-                    FilterTextField(text: $orderIdFilter, placeholder: "Filter this column...", width: 100)
+                    FilterTextField(text: $orderIdFilter, placeholder: "Filter this column...", width: 70)
                     Divider()
-                    FilterDropdown(selection: $rtsFilter, options: ["All", "Yes", "No"], width: 80, colorMap: ["Yes": .green, "No": .red, "All": .primary])
+                    FilterDropdown(selection: $rtsFilter, options: ["All", "Yes", "No"], width: 50, colorMap: ["Yes": .green, "No": .red, "All": .primary])
                     Divider()
-                    FilterTextField(text: $coverageAreaFilter, placeholder: "Filter this column...", width: 100)
+                    FilterTextField(text: $coverageAreaFilter, placeholder: "Filter this column...", width: 80)
                     Divider()
-                    FilterDropdown(selection: $statusFilter, options: ["All", "Placed", "Complete", "Returned"], width: 120, colorMap: ["Complete": .green, "Placed": .blue, "Returned": .orange, "All": .primary])
+                    FilterDropdown(selection: $statusFilter, options: ["All", "Placed", "Complete", "Returned"], width: 90, colorMap: ["Complete": .green, "Placed": .blue, "Returned": .orange, "All": .primary])
                     Divider()
-                    FilterTextField(text: $productFilter, placeholder: "Filter this column...", width: 120, suggestions: productSuggestions)
+                    FilterTextField(text: $productFilter, placeholder: "Filter this column...", width: 100, suggestions: productSuggestions)
                     Divider()
                     FilterTextField(text: $notesFilter, placeholder: "Filter this column...", width: 200)
                     Divider()
@@ -422,19 +487,33 @@ struct FieldMapsTableView: View {
                         }
                         Divider()
 
+                        // Preview button
+                        Button(action: {
+                            previewJob = fieldMap
+                            showPreview = true
+                        }) {
+                            Image(systemName: "eye.fill")
+                                .foregroundColor(.blue)
+                                .font(.system(size: 16))
+                                .frame(width: 40)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 10)
+                        }
+                        Divider()
+
                         TableCell(text: fieldMap.customer, width: 180)
                         Divider()
                         TableCell(text: fieldMap.contractor ?? "", width: 180)
                         Divider()
-                        TableCell(text: "\(fieldMap.id)", width: 100)
+                        TableCell(text: "\(fieldMap.id)", width: 70)
                         Divider()
-                        TableCell(text: fieldMap.rts ? "Yes" : "No", width: 80, color: fieldMap.rts ? .green : .red)
+                        TableCell(text: fieldMap.rts ? "Yes" : "No", width: 50, color: fieldMap.rts ? .green : .red)
                         Divider()
-                        TableCell(text: String(format: "%.2f", fieldMap.area * 2.47105), width: 100, alignment: .trailing)
+                        TableCell(text: String(format: "%.2f", fieldMap.area * 2.47105), width: 80, alignment: .trailing)
                         Divider()
-                        TableCell(text: fieldMap.status.capitalized, width: 120, color: statusColor(for: fieldMap.status))
+                        TableCell(text: fieldMap.status.capitalized, width: 90, color: statusColor(for: fieldMap.status))
                         Divider()
-                        TableCell(text: fieldMap.prodDupli ?? "-", width: 120)
+                        TableCell(text: fieldMap.prodDupli ?? "-", width: 100)
                         Divider()
                         TableCell(text: fieldMap.notes.isEmpty ? "-" : fieldMap.notes, width: 200)
                         Divider()
