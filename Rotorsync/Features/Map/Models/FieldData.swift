@@ -7,7 +7,9 @@ struct FieldData: Identifiable, Codable {
     let coordinates: [CLLocationCoordinate2D]
     let workedCoordinates: [[CLLocationCoordinate2D]]? // Multiple spray line polygons
     let acres: Double
-    let color: String
+    let color: String  // Fill color
+    let boundaryColor: String?  // Stroke/outline color (optional)
+    let contractorDashColor: String?  // Dashed border color for contractor (optional)
     let category: String?
     let application: String?
     let description: String?
@@ -24,7 +26,8 @@ struct FieldData: Identifiable, Codable {
     }
 
     init(id: Int, name: String, coordinates: [CLLocationCoordinate2D], acres: Double,
-         color: String, category: String?, application: String?, description: String?,
+         color: String, boundaryColor: String? = nil, contractorDashColor: String? = nil,
+         category: String?, application: String?, description: String?,
          prodDupli: String? = nil, productList: String? = nil, notes: String? = nil, address: String? = nil,
          source: FieldSource? = nil, workedCoordinates: [[CLLocationCoordinate2D]]? = nil) {
         self.id = id
@@ -33,6 +36,8 @@ struct FieldData: Identifiable, Codable {
         self.workedCoordinates = workedCoordinates
         self.acres = acres
         self.color = color
+        self.boundaryColor = boundaryColor
+        self.contractorDashColor = contractorDashColor
         self.category = category
         self.application = application
         self.description = description
@@ -44,7 +49,7 @@ struct FieldData: Identifiable, Codable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, acres, color, category, application, description
+        case id, name, acres, color, boundaryColor, contractorDashColor, category, application, description
         case prodDupli, productList, notes, address, source
         case coordinates, workedCoordinates
     }
@@ -60,6 +65,8 @@ struct FieldData: Identifiable, Codable {
         name = try c.decode(String.self, forKey: .name)
         acres = try c.decode(Double.self, forKey: .acres)
         color = try c.decode(String.self, forKey: .color)
+        boundaryColor = try c.decodeIfPresent(String.self, forKey: .boundaryColor)
+        contractorDashColor = try c.decodeIfPresent(String.self, forKey: .contractorDashColor)
         category = try c.decodeIfPresent(String.self, forKey: .category)
         application = try c.decodeIfPresent(String.self, forKey: .application)
         description = try c.decodeIfPresent(String.self, forKey: .description)
@@ -86,6 +93,8 @@ struct FieldData: Identifiable, Codable {
         try c.encode(name, forKey: .name)
         try c.encode(acres, forKey: .acres)
         try c.encode(color, forKey: .color)
+        try c.encodeIfPresent(boundaryColor, forKey: .boundaryColor)
+        try c.encodeIfPresent(contractorDashColor, forKey: .contractorDashColor)
         try c.encodeIfPresent(category, forKey: .category)
         try c.encodeIfPresent(application, forKey: .application)
         try c.encodeIfPresent(description, forKey: .description)

@@ -219,6 +219,7 @@ struct MapRepresentable: UIViewRepresentable {
             if parent.showImportedFields {
                 for field in parent.importedFields {
                     if field.coordinates.count > 2 {
+                        // Add boundary polygon (rendered first, underneath)
                         let poly = MKPolygon(
                             coordinates: field.coordinates + [field.coordinates.first!],
                             count: field.coordinates.count + 1
@@ -226,6 +227,17 @@ struct MapRepresentable: UIViewRepresentable {
                         poly.title = field.name
                         poly.subtitle = "field_\(field.id)"
                         mapView.addOverlay(poly)
+
+                        // Add contractor dash overlay (rendered on top)
+                        if let contractorDash = field.contractorDashColor, !contractorDash.isEmpty {
+                            let dashPoly = MKPolygon(
+                                coordinates: field.coordinates + [field.coordinates.first!],
+                                count: field.coordinates.count + 1
+                            )
+                            dashPoly.title = field.name
+                            dashPoly.subtitle = "field_\(field.id)_dash"
+                            mapView.addOverlay(dashPoly)
+                        }
 
                         // Add worked geometry (spray lines) as POLYLINES
                         if let workedPolygons = field.workedCoordinates {
@@ -306,16 +318,36 @@ struct MapRepresentable: UIViewRepresentable {
                     return r
                 }
 
+                // Check if it's a contractor dash overlay (format: "field_123_dash")
+                if let subtitle = poly.subtitle, subtitle.hasSuffix("_dash") {
+                    // Extract field ID from "field_123_dash"
+                    let parts = subtitle.split(separator: "_")
+                    if parts.count >= 2, let fieldId = Int(parts[1]) {
+                        if let field = parent.importedFields.first(where: { $0.id == fieldId }) {
+                            if let contractorDashHex = field.contractorDashColor, !contractorDashHex.isEmpty {
+                                let dashCol = Color(hex: contractorDashHex)
+                                r.strokeColor = UIColor(dashCol)
+                                r.fillColor = .clear  // No fill - transparent overlay
+                                r.lineDashPattern = [5, 10]  // 5pt dash, 10pt gap
+                                r.lineWidth = 5
+                                print("🔲 Rendering contractor dash overlay: \(contractorDashHex)")
+                                return r
+                            }
+                        }
+                    }
+                }
+
                 // Extract field ID from subtitle (format: "field_123")
                 if let subtitle = poly.subtitle,
                    subtitle.starts(with: "field_"),
+                   !subtitle.hasSuffix("_dash"),
                    let fieldIdStr = subtitle.split(separator: "_").last,
                    let fieldId = Int(fieldIdStr) {
                     print("🎨 Looking for field ID: \(fieldId)")
-                    
+
                     // Find field by ID
                     if let field = parent.importedFields.first(where: { $0.id == fieldId }) {
-                        print("🎨 Found field: \(field.name), color: \(field.color)")
+                        print("🎨 Found field: \(field.name), fill: \(field.color), boundary: \(field.boundaryColor ?? "use fill")")
                         // Check for empty color -> use zebra stripes
                         if field.color.isEmpty {
                             print("🎨 🦓 Using ZEBRA STRIPES (no color set)")
@@ -324,11 +356,24 @@ struct MapRepresentable: UIViewRepresentable {
                             r.lineWidth = 3
                             return r
                         }
-                        
-                        let col = Color(hex: field.color)
-                        r.fillColor = UIColor(col).withAlphaComponent(0.4)
-                        r.strokeColor = UIColor(col)
+
+                        // Fill color
+                        let fillCol = Color(hex: field.color)
+                        r.fillColor = UIColor(fillCol).withAlphaComponent(0.4)
+                        print("🎨 Set fillColor to: \(field.color)")
+
+                        // Stroke color - use boundaryColor if set, otherwise use fill color
+                        if let boundaryColorHex = field.boundaryColor, !boundaryColorHex.isEmpty {
+                            let strokeCol = Color(hex: boundaryColorHex)
+                            r.strokeColor = UIColor(strokeCol)
+                            print("🎨 Set strokeColor to boundaryColor: \(boundaryColorHex)")
+                        } else {
+                            r.strokeColor = UIColor(fillCol)
+                            print("🎨 Set strokeColor to fillColor (no boundary): \(field.color)")
+                        }
+
                         r.lineWidth = 3
+                        print("🎨 Renderer configured - fillColor: \(r.fillColor?.description ?? "nil"), strokeColor: \(r.strokeColor?.description ?? "nil"), lineWidth: \(r.lineWidth)")
                         return r
                     } else {
                         print("🎨 ❌ Field not found in importedFields")

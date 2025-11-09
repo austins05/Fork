@@ -16,6 +16,9 @@ struct FieldMapsTableView: View {
     @State private var isImporting = false
     @State private var importProgress = 0
     @State private var importTotal = 0
+    @State private var showDashSettings = false
+    @State private var showColorWarning = false
+    @State private var colorWarningMessage = ""
 
     // Filter states
     @State private var customerFilter = ""
@@ -23,7 +26,7 @@ struct FieldMapsTableView: View {
     @State private var orderIdFilter = ""
     @State private var rtsFilter = "All"
     @State private var coverageAreaFilter = ""
-    @State private var statusFilter = ""
+    @State private var statusFilter = "All"
     @State private var productFilter = ""
     @State private var notesFilter = ""
     @State private var applicationRateFilter = ""
@@ -103,6 +106,14 @@ struct FieldMapsTableView: View {
             } message: {
                 Text(viewModel.errorMessage)
             }
+            .alert("Color Conflict Warning", isPresented: $showColorWarning) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(colorWarningMessage)
+            }
+            .sheet(isPresented: $showDashSettings) {
+                TerralinkSettingsView()
+            }
         }
         .navigationViewStyle(StackNavigationViewStyle())
     }
@@ -139,7 +150,7 @@ struct FieldMapsTableView: View {
                 orderIdFilter = ""
                 rtsFilter = "All"
                 coverageAreaFilter = ""
-                statusFilter = ""
+                statusFilter = "All"
                 productFilter = ""
                 notesFilter = ""
                 applicationRateFilter = ""
@@ -155,6 +166,28 @@ struct FieldMapsTableView: View {
             }) {
                 Text("Clear")
                     .font(.subheadline)
+            }
+            .padding(.leading, 8)
+
+            Button(action: {
+                FieldGeometryCache.shared.clearCache()
+                print("🗑️ Cache cleared manually")
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "trash.fill")
+                    Text("Clear Cache")
+                        .font(.subheadline)
+                }
+            }
+            .padding(.leading, 8)
+            .foregroundColor(.red)
+
+            Button(action: {
+                showDashSettings = true
+            }) {
+                Image(systemName: "gearshape.fill")
+                    .font(.title2)
+                    .foregroundColor(.blue)
             }
             .padding(.leading, 8)
         }
@@ -207,8 +240,12 @@ struct FieldMapsTableView: View {
             }
 
             // Contractor filter
-            if !contractorFilter.isEmpty && !fieldMap.customer.localizedCaseInsensitiveContains(contractorFilter) {
-                return false
+            if !contractorFilter.isEmpty {
+                if let contractor = fieldMap.contractor, !contractor.localizedCaseInsensitiveContains(contractorFilter) {
+                    return false
+                } else if fieldMap.contractor == nil {
+                    return false
+                }
             }
 
             // Order ID filter
@@ -235,7 +272,7 @@ struct FieldMapsTableView: View {
             }
 
             // Status filter
-            if !statusFilter.isEmpty && !fieldMap.status.localizedCaseInsensitiveContains(statusFilter) {
+            if statusFilter != "All" && !statusFilter.isEmpty && !fieldMap.status.localizedCaseInsensitiveContains(statusFilter) {
                 return false
             }
 
@@ -258,6 +295,27 @@ struct FieldMapsTableView: View {
         }
     }
 
+    // Auto-suggest lists for filters
+    var customerSuggestions: [String] {
+        Array(Set(viewModel.fieldMaps.map { $0.customer })).filter { !$0.isEmpty }
+    }
+
+    var contractorSuggestions: [String] {
+        Array(Set(viewModel.fieldMaps.compactMap { $0.contractor })).filter { !$0.isEmpty }
+    }
+
+    var statusSuggestions: [String] {
+        Array(Set(viewModel.fieldMaps.map { $0.status })).filter { !$0.isEmpty }
+    }
+
+    var productSuggestions: [String] {
+        Array(Set(viewModel.fieldMaps.map { $0.productList })).filter { !$0.isEmpty }
+    }
+
+    var addressSuggestions: [String] {
+        Array(Set(viewModel.fieldMaps.map { $0.address })).filter { !$0.isEmpty }
+    }
+
     private var tableView: some View {
         VStack(alignment: .leading, spacing: 0) {
             Spacer()
@@ -274,6 +332,8 @@ struct FieldMapsTableView: View {
                             selectedJobs.removeAll()
                         } else {
                             selectedJobs = Set(filteredFieldMaps.map { $0.id })
+                            // Download geometry for all selected fields
+                            viewModel.downloadGeometryBatch(for: filteredFieldMaps)
                         }
                     }) {
                         Image(systemName: selectedJobs.count == filteredFieldMaps.count && !filteredFieldMaps.isEmpty ? "checkmark.circle.fill" : "circle")
@@ -316,25 +376,25 @@ struct FieldMapsTableView: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 6)
                     Divider()
-                    FilterTextField(text: $customerFilter, placeholder: "Filter this column...", width: 180)
+                    FilterTextField(text: $customerFilter, placeholder: "Filter this column...", width: 180, suggestions: customerSuggestions)
                     Divider()
-                    FilterTextField(text: $contractorFilter, placeholder: "Filter this column...", width: 180)
+                    FilterTextField(text: $contractorFilter, placeholder: "Filter this column...", width: 180, suggestions: contractorSuggestions)
                     Divider()
                     FilterTextField(text: $orderIdFilter, placeholder: "Filter this column...", width: 100)
                     Divider()
-                    FilterTextField(text: $rtsFilter, placeholder: "All", width: 80)
+                    FilterDropdown(selection: $rtsFilter, options: ["All", "Yes", "No"], width: 80, colorMap: ["Yes": .green, "No": .red, "All": .primary])
                     Divider()
                     FilterTextField(text: $coverageAreaFilter, placeholder: "Filter this column...", width: 100)
                     Divider()
-                    FilterTextField(text: $statusFilter, placeholder: "Filter this column...", width: 120)
+                    FilterDropdown(selection: $statusFilter, options: ["All", "Placed", "Complete", "Returned"], width: 120, colorMap: ["Complete": .green, "Placed": .blue, "Returned": .orange, "All": .primary])
                     Divider()
-                    FilterTextField(text: $productFilter, placeholder: "Filter this column...", width: 120)
+                    FilterTextField(text: $productFilter, placeholder: "Filter this column...", width: 120, suggestions: productSuggestions)
                     Divider()
                     FilterTextField(text: $notesFilter, placeholder: "Filter this column...", width: 200)
                     Divider()
                     FilterTextField(text: $applicationRateFilter, placeholder: "Filter this column...", width: 100)
                     Divider()
-                    FilterTextField(text: $mapAddressFilter, placeholder: "Filter this column...", width: 200)
+                    FilterTextField(text: $mapAddressFilter, placeholder: "Filter this column...", width: 200, suggestions: addressSuggestions)
                 }
                 .background(Color(.systemGray6))
                 .frame(height: 40)
@@ -349,6 +409,8 @@ struct FieldMapsTableView: View {
                                 selectedJobs.remove(fieldMap.id)
                             } else {
                                 selectedJobs.insert(fieldMap.id)
+                                // Download geometry in background when selected
+                                viewModel.downloadGeometry(for: fieldMap)
                             }
                         }) {
                             Image(systemName: selectedJobs.contains(fieldMap.id) ? "checkmark.circle.fill" : "circle")
@@ -368,7 +430,7 @@ struct FieldMapsTableView: View {
                         Divider()
                         TableCell(text: fieldMap.rts ? "Yes" : "No", width: 80, color: fieldMap.rts ? .green : .red)
                         Divider()
-                        TableCell(text: String(format: "%.2f", fieldMap.area), width: 100, alignment: .trailing)
+                        TableCell(text: String(format: "%.2f", fieldMap.area * 2.47105), width: 100, alignment: .trailing)
                         Divider()
                         TableCell(text: fieldMap.status.capitalized, width: 120, color: statusColor(for: fieldMap.status))
                         Divider()
@@ -458,6 +520,112 @@ struct FieldMapsTableView: View {
                     continue
                 }
 
+                // Try cache first for instant import
+                print("🔍 Checking cache for job \(jobId)...")
+                if let cached = FieldGeometryCache.shared.getCachedGeometry(fieldId: jobId) {
+                    let boundaries = cached.boundaries  // Multiple boundaries
+                    let sprayLines = cached.sprayLines
+                    print("✅ CACHE HIT for job \(jobId) - \(boundaries.count) boundaries, \(sprayLines?.count ?? 0) spray lines")
+
+                    // Convert colors from Tabula
+                    let colorMap: [String: String] = [
+                        "red": "#FF0000", "orange": "#FF8C00", "yellow": "#FFFF00",
+                        "green": "#00FF00", "teal": "#00FFFF", "blue": "#0000FF",
+                        "purple": "#9966FF", "pink": "#FF69B4", "magenta": "#FF00FF",
+                        "gray": "#404040", "grey": "#404040", "black": "#000000", "white": "#FFFFFF"
+                    ]
+
+                    // Fill color from 'color' field
+                    var fillColor = ""
+                    if let colorName = job.color {
+                        let name = colorName.lowercased().trimmingCharacters(in: CharacterSet.whitespaces)
+                        if name.hasPrefix("#") {
+                            fillColor = colorName
+                        } else if let hexColor = colorMap[name] {
+                            fillColor = hexColor
+                        }
+                    }
+
+                    // Boundary color from 'boundaryColor' field, fallback to fill color
+                    var strokeColor: String? = nil
+                    print("🎨 Job \(jobId): boundaryColor field = '\(job.boundaryColor ?? "nil")'")
+                    if let boundaryColorName = job.boundaryColor, !boundaryColorName.isEmpty {
+                        let name = boundaryColorName.lowercased().trimmingCharacters(in: CharacterSet.whitespaces)
+                        print("🎨 Processing boundaryColor '\(boundaryColorName)' -> lowercased: '\(name)'")
+                        if name.hasPrefix("#") {
+                            strokeColor = boundaryColorName
+                            print("🎨 Using hex boundary: \(boundaryColorName)")
+                        } else if let hexColor = colorMap[name] {
+                            strokeColor = hexColor
+                            print("🎨 Converted '\(name)' to hex: \(hexColor)")
+                        } else {
+                            print("❌ Could not find color '\(name)' in colorMap")
+                        }
+                    } else {
+                        print("🎨 No boundaryColor set, will use fill color")
+                    }
+                    print("🎨 Final strokeColor: \(strokeColor ?? "nil")")
+
+
+                    // Check if contractor has dash color setting
+                    var contractorDash: String? = nil
+                    if let contractorName = job.contractor, !contractorName.isEmpty {
+                        contractorDash = ContractorDashSettingsManager.shared.getDashColor(for: contractorName)
+                        print("🔍 Contractor '\(contractorName)' has dash color: \(contractorDash ?? "none")")
+                    }
+
+                    // Check if boundary and dash colors match
+                    if let dash = contractorDash {
+                        // Compare with boundary color (or fill color if no boundary color)
+                        let actualBoundary = strokeColor ?? fillColor
+                        print("🔍 Checking colors - boundary: '\(actualBoundary)', dash: '\(dash)'")
+
+                        if !actualBoundary.isEmpty && dash.lowercased() == actualBoundary.lowercased() {
+                            print("🚨 COLOR MATCH DETECTED!")
+                            await MainActor.run {
+                                colorWarningMessage = "⚠️ Order #\(jobId) (\(job.name))\n\nBoundary color and contractor dash color are both \(dash).\n\nThe contractor dash pattern won't be visible! Please change one of the colors."
+                                showColorWarning = true
+                            }
+                            print("⚠️ COLOR CONFLICT: Job \(jobId) - boundary=\(actualBoundary), dash=\(dash)")
+                        } else {
+                            print("✅ Colors are different - boundary: \(actualBoundary), dash: \(dash)")
+                        }
+                    } else {
+                        print("ℹ️ No contractor dash color set for job \(jobId)")
+                    }
+
+                    // Create a field entry for each boundary polygon
+                    for (index, boundary) in boundaries.enumerated() {
+                        let fieldName = boundaries.count > 1 ? "\(job.name) (\(index + 1))" : job.name
+                        let fieldData = FieldData(
+                            id: job.id + index * 10000,  // Unique ID for each polygon
+                            name: fieldName,
+                            coordinates: boundary,
+                            acres: job.area * 2.47105 / Double(boundaries.count),  // Divide area
+                            color: fillColor,  // Fill color
+                            boundaryColor: strokeColor,  // Stroke color (nil means use fill color)
+                            contractorDashColor: contractorDash,  // Dashed border for contractor
+                            category: job.status,
+                            application: nil,
+                            description: nil,
+                            prodDupli: job.prodDupli,
+                            productList: job.productList,
+                            notes: job.notes,
+                            address: job.address,
+                            source: .tabula,
+                            workedCoordinates: sprayLines
+                        )
+                        fields.append(fieldData)
+                    }
+                    print("⚡ INSTANT: Used cached geometry for job \(jobId) (\(boundaries.count) boundaries)")
+                    await MainActor.run { importProgress += 1 }
+                    continue
+                }
+
+                // Fall back to network if not cached
+                print("❌ CACHE MISS for job \(jobId) - fetching from network")
+
+
                 // Fetch geometry from backend
                 let url = URL(string: "http://192.168.68.226:3000/api/field-maps/\(jobId)/geometry?type=requested")!
                 let (data, response) = try await URLSession.shared.data(from: url)
@@ -502,25 +670,24 @@ struct FieldMapsTableView: View {
                     continue
                 }
 
-                guard let firstFeature = features.first,
-                      let geometry = firstFeature["geometry"] as? [String: Any] else {
-                    errors.append("Job \(jobId): Invalid feature geometry")
-                    print("❌ Invalid geometry for job \(jobId)")
-                    await MainActor.run { importProgress += 1 }
-                    continue
+                // Parse ALL boundary features
+                var boundaryCoordinates: [[CLLocationCoordinate2D]] = []
+                for feature in features {
+                    guard let geometry = feature["geometry"] as? [String: Any],
+                          let coords = parseGeoJSONCoordinates(geometry) else {
+                        continue
+                    }
+                    boundaryCoordinates.append(coords)
                 }
 
-                guard let coordinates = parseGeoJSONCoordinates(geometry) else {
-                    errors.append("Job \(jobId): Failed to parse coordinates")
+                if boundaryCoordinates.isEmpty {
+                    errors.append("Job \(jobId): Failed to parse any coordinates")
                     print("❌ Failed to parse coordinates for job \(jobId)")
                     await MainActor.run { importProgress += 1 }
                     continue
                 }
-                // Use Color custom field from Tabula API and convert to hex
-                let colorName = job.color ?? ""
-                var color = "" // Empty = zebra stripes fallback
-                
-                // Convert color name to hex
+
+                // Convert colors from Tabula
                 let colorMap: [String: String] = [
                     "red": "#FF0000",
                     "orange": "#FF8C00",
@@ -530,18 +697,44 @@ struct FieldMapsTableView: View {
                     "blue": "#0000FF",
                     "purple": "#9966FF",
                     "pink": "#FF69B4",
+                    "magenta": "#FF00FF",
                     "gray": "#404040",
-                    "grey": "#404040"
+                    "grey": "#404040",
+                    "black": "#000000",
+                    "white": "#FFFFFF"
                 ]
-                
-                let name = colorName.lowercased().trimmingCharacters(in: CharacterSet.whitespaces)
-                if name.hasPrefix("#") {
-                    color = colorName
-                } else if let hexColor = colorMap[name] {
-                    color = hexColor
+
+                // Fill color from 'color' field
+                var fillColor = ""
+                if let colorName = job.color {
+                    let name = colorName.lowercased().trimmingCharacters(in: CharacterSet.whitespaces)
+                    if name.hasPrefix("#") {
+                        fillColor = colorName
+                    } else if let hexColor = colorMap[name] {
+                        fillColor = hexColor
+                    }
                 }
-                
-                print("🎨 Import: Job \(job.id) (\(job.name)) - colorName: '\(colorName)' -> hex: '\(color)'")
+
+                // Boundary color from 'boundaryColor' field, fallback to fill color
+                var strokeColor: String? = nil
+                print("🎨 Job \(jobId): boundaryColor field = '\(job.boundaryColor ?? "nil")'")
+                if let boundaryColorName = job.boundaryColor, !boundaryColorName.isEmpty {
+                    let name = boundaryColorName.lowercased().trimmingCharacters(in: CharacterSet.whitespaces)
+                    print("🎨 Processing boundaryColor '\(boundaryColorName)' -> lowercased: '\(name)'")
+                    if name.hasPrefix("#") {
+                        strokeColor = boundaryColorName
+                        print("🎨 Using hex boundary: \(boundaryColorName)")
+                    } else if let hexColor = colorMap[name] {
+                        strokeColor = hexColor
+                        print("🎨 Converted '\(name)' to hex: \(hexColor)")
+                    } else {
+                        print("❌ Could not find color '\(name)' in colorMap")
+                    }
+                } else {
+                    print("🎨 No boundaryColor set, will use fill color")
+                }
+                print("🎨 Final strokeColor: \(strokeColor ?? "nil")")
+                print("🎨 Import: Job \(job.id) - fill: '\(job.color ?? "none")' -> \(fillColor), boundary: '\(job.boundaryColor ?? "none")' -> \(strokeColor ?? "use fill")")
 
                 // Fetch worked geometry (spray lines) - fetch ALL features
                 var workedPolygons: [[CLLocationCoordinate2D]]? = nil
@@ -568,24 +761,58 @@ struct FieldMapsTableView: View {
                     }
                 }
 
-                let fieldData = FieldData(
-                    id: job.id,
-                    name: job.name,
-                    coordinates: coordinates,
-                    acres: job.area * 2.47105, // Convert hectares to acres
-                    color: color,
-                    category: job.status,
-                    application: nil,
-                    description: nil,
-                    prodDupli: job.prodDupli,
-                    productList: job.productList,
-                    notes: job.notes,
-                    address: job.address,
-                    source: .tabula,
-                    workedCoordinates: workedPolygons
-                )
-                fields.append(fieldData)
-                print("✅ Successfully parsed job \(jobId)")
+
+                // Check if contractor has dash color setting
+                var contractorDash: String? = nil
+                if let contractorName = job.contractor, !contractorName.isEmpty {
+                    contractorDash = ContractorDashSettingsManager.shared.getDashColor(for: contractorName)
+                    print("🔍 Contractor '\(contractorName)' has dash color: \(contractorDash ?? "none")")
+                }
+
+                // Check if boundary and dash colors match
+                if let dash = contractorDash {
+                    // Compare with boundary color (or fill color if no boundary color)
+                    let actualBoundary = strokeColor ?? fillColor
+                    print("🔍 Checking colors - boundary: '\(actualBoundary)', dash: '\(dash)'")
+
+                    if !actualBoundary.isEmpty && dash.lowercased() == actualBoundary.lowercased() {
+                        print("🚨 COLOR MATCH DETECTED!")
+                        await MainActor.run {
+                            colorWarningMessage = "⚠️ Order #\(jobId) (\(job.name))\n\nBoundary color and contractor dash color are both \(dash).\n\nThe contractor dash pattern won't be visible! Please change one of the colors."
+                            showColorWarning = true
+                        }
+                        print("⚠️ COLOR CONFLICT: Job \(jobId) - boundary=\(actualBoundary), dash=\(dash)")
+                    } else {
+                        print("✅ Colors are different - boundary: \(actualBoundary), dash: \(dash)")
+                    }
+                } else {
+                    print("ℹ️ No contractor dash color set for job \(jobId)")
+                }
+
+                // Create a field entry for each boundary polygon
+                for (index, boundaryCoords) in boundaryCoordinates.enumerated() {
+                    let fieldName = boundaryCoordinates.count > 1 ? "\(job.name) (\(index + 1))" : job.name
+                    let fieldData = FieldData(
+                        id: job.id + index * 10000,  // Unique ID for each polygon
+                        name: fieldName,
+                        coordinates: boundaryCoords,
+                        acres: job.area * 2.47105 / Double(boundaryCoordinates.count), // Divide area
+                        color: fillColor,  // Fill color
+                        boundaryColor: strokeColor,  // Stroke color (nil means use fill color)
+                        contractorDashColor: contractorDash,  // Dashed border for contractor
+                        category: job.status,
+                        application: nil,
+                        description: nil,
+                        prodDupli: job.prodDupli,
+                        productList: job.productList,
+                        notes: job.notes,
+                        address: job.address,
+                        source: .tabula,
+                        workedCoordinates: workedPolygons
+                    )
+                    fields.append(fieldData)
+                }
+                print("✅ Successfully parsed job \(jobId) - \(boundaryCoordinates.count) boundaries")
 
                 // Update progress
                 await MainActor.run {
@@ -679,16 +906,124 @@ struct FilterTextField: View {
     @Binding var text: String
     let placeholder: String
     let width: CGFloat
+    var suggestions: [String] = []
+
+    @State private var showSuggestions = false
+    @FocusState private var isFocused: Bool
+
+    var filteredSuggestions: [String] {
+        if text.isEmpty {
+            return []
+        }
+        return suggestions
+            .filter { $0.localizedCaseInsensitiveContains(text) }
+            .sorted()
+            .prefix(5)
+            .map { $0 }
+    }
 
     var body: some View {
-        TextField(placeholder, text: $text)
-            .font(.system(size: 11))
-            .textFieldStyle(PlainTextFieldStyle())
+        VStack(alignment: .leading, spacing: 0) {
+            TextField(placeholder, text: $text)
+                .font(.system(size: 11))
+                .textFieldStyle(PlainTextFieldStyle())
+                .frame(width: width, alignment: .leading)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(Color(.systemBackground))
+                .cornerRadius(4)
+                .focused($isFocused)
+                .onChange(of: text) { newValue in
+                    showSuggestions = !newValue.isEmpty && !filteredSuggestions.isEmpty
+                }
+                .onChange(of: isFocused) { focused in
+                    if !focused {
+                        showSuggestions = false
+                    } else if !text.isEmpty {
+                        showSuggestions = !filteredSuggestions.isEmpty
+                    }
+                }
+
+            // Suggestions dropdown
+            if showSuggestions && !filteredSuggestions.isEmpty {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(filteredSuggestions, id: \.self) { suggestion in
+                        Button(action: {
+                            text = suggestion
+                            showSuggestions = false
+                            isFocused = false
+                        }) {
+                            Text(suggestion)
+                                .font(.system(size: 11))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color(.systemBackground))
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .hoverEffect()
+
+                        if suggestion != filteredSuggestions.last {
+                            Divider()
+                        }
+                    }
+                }
+                .background(Color(.systemBackground))
+                .cornerRadius(4)
+                .shadow(radius: 4)
+                .frame(width: width)
+                .zIndex(1000)
+            }
+        }
+    }
+}
+
+struct FilterDropdown: View {
+    @Binding var selection: String
+    let options: [String]
+    let width: CGFloat
+    var colorMap: [String: Color] = [:]
+
+    func colorForOption(_ option: String) -> Color {
+        colorMap[option] ?? .primary
+    }
+
+    var body: some View {
+        Menu {
+            ForEach(options, id: \.self) { option in
+                Button(action: {
+                    selection = option
+                }) {
+                    HStack {
+                        if selection == option {
+                            Image(systemName: "checkmark.circle.fill")
+                        } else {
+                            Image(systemName: "circle")
+                                .opacity(0.3)
+                        }
+                        Text(option)
+                            .bold()
+                    }
+                    .foregroundColor(colorForOption(option))
+                }
+            }
+        } label: {
+            HStack {
+                Text(selection)
+                    .font(.system(size: 11))
+                    .bold()
+                Spacer()
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary)
+            }
+            .foregroundColor(colorForOption(selection))
             .frame(width: width, alignment: .leading)
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .background(Color(.systemBackground))
             .cornerRadius(4)
+        }
     }
 }
 
@@ -700,6 +1035,21 @@ class FieldMapsTableViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var showError = false
     @Published var errorMessage = ""
+
+    // Optimized URLSession with connection pooling and compression
+    private lazy var urlSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.httpMaximumConnectionsPerHost = 6
+        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForResource = 60
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.httpAdditionalHeaders = ["Accept-Encoding": "gzip, deflate"]
+        return URLSession(configuration: config)
+    }()
+
+    // Track pending downloads to avoid duplicates
+    private var pendingDownloads = Set<Int>()
+    private let downloadQueue = DispatchQueue(label: "com.rotorsync.downloads", attributes: .concurrent)
 
     func loadInitialData() async {
         await loadTestData()
@@ -715,7 +1065,7 @@ class FieldMapsTableViewModel: ObservableObject {
                 throw URLError(.badURL)
             }
 
-            let (data, _) = try await URLSession.shared.data(from: url)
+            let (data, _) = try await urlSession.data(from: url)
             let apiResponse = try JSONDecoder().decode(JobsAPIResponse.self, from: data)
             fieldMaps = apiResponse.data.sorted { $0.id > $1.id }
         } catch {
@@ -725,13 +1075,233 @@ class FieldMapsTableViewModel: ObservableObject {
     }
 
     func refreshData() async {
+        // Clear all cached geometry to force fresh downloads
+        FieldGeometryCache.shared.clearCache()
+        print("🗑️ Cleared all cached geometry")
+
         // Reload field maps list from server
         await loadTestData()
 
         // Clear all Tabula fields from the map to force re-import with fresh geometry
         SharedFieldStorage.shared.clearAllFields()
-        print("✅ Refresh complete - cleared all fields. Re-select and import fields to get latest geometry")
+        print("✅ Refresh complete - cleared cache and all fields. Re-select and import fields to get latest geometry")
     }
+
+    func downloadGeometry(for job: TabulaJob) {
+        Task {
+            print("⬇️ downloadGeometry called for job \(job.id)")
+
+            // Skip if already cached or currently downloading
+            if FieldGeometryCache.shared.isCached(fieldId: job.id) {
+                print("✅ Job \(job.id) already cached, skipping")
+                return
+            }
+
+            // Avoid duplicate downloads
+            await MainActor.run {
+                guard !pendingDownloads.contains(job.id) else {
+                    print("⚠️ Job \(job.id) already downloading, skipping")
+                    return
+                }
+                pendingDownloads.insert(job.id)
+            }
+
+            defer {
+                Task { @MainActor in
+                    pendingDownloads.remove(job.id)
+                }
+            }
+
+            print("📥 Starting download for job \(job.id)...")
+
+            do {
+                // Download boundary and spray lines in parallel using TaskGroup
+                try await withThrowingTaskGroup(of: (String, Data).self) { group in
+                    // Fetch boundary geometry
+                    group.addTask {
+                        print("📡 Fetching boundary for \(job.id)...")
+                        guard let url = URL(string: "http://192.168.68.226:3000/api/field-maps/\(job.id)/geometry?type=requested") else {
+                            throw URLError(.badURL)
+                        }
+                        let (data, response) = try await self.urlSession.data(from: url)
+                        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                            print("❌ Boundary fetch failed for \(job.id)")
+                            throw URLError(.badServerResponse)
+                        }
+                        print("✅ Got boundary data for \(job.id)")
+                        return ("boundary", data)
+                    }
+
+                    // Fetch spray lines
+                    group.addTask {
+                        print("📡 Fetching spray lines for \(job.id)...")
+                        guard let url = URL(string: "http://192.168.68.226:3000/api/field-maps/\(job.id)/geometry?type=worked-detailed") else {
+                            throw URLError(.badURL)
+                        }
+                        let (data, response) = try await self.urlSession.data(from: url)
+                        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                            print("⚠️ Spray lines not available for \(job.id)")
+                            return ("spray", Data())
+                        }
+                        print("✅ Got spray lines data for \(job.id)")
+                        return ("spray", data)
+                    }
+
+                    // Collect results
+                    var boundaryData: Data?
+                    var sprayData: Data?
+
+                    for try await (type, data) in group {
+                        if type == "boundary" {
+                            boundaryData = data
+                        } else if type == "spray" {
+                            sprayData = data
+                        }
+                    }
+
+                    // Parse and cache
+                    guard let boundaryData = boundaryData else {
+                        print("❌ No boundary data for \(job.id)")
+                        return
+                    }
+
+                    print("🔍 Parsing geometry for \(job.id)...")
+                    let geometryResponse = try JSONDecoder().decode(GeometryAPIResponse.self, from: boundaryData)
+                    let boundaries = geometryResponse.data.features.compactMap { $0.geometry.mapCoordinates }
+                    print("✅ Parsed \(boundaries.count) boundaries for \(job.id)")
+
+                    var sprayLines: [[CLLocationCoordinate2D]]? = nil
+                    if let sprayData = sprayData, !sprayData.isEmpty {
+                        let workedGeometry = try? JSONDecoder().decode(GeometryAPIResponse.self, from: sprayData)
+                        sprayLines = workedGeometry?.data.features.compactMap { $0.geometry.mapCoordinates }
+                        print("✅ Parsed \(sprayLines?.count ?? 0) spray lines for \(job.id)")
+                    }
+
+                    // Cache the geometry
+                    print("💾 Caching geometry for \(job.id)...")
+                    FieldGeometryCache.shared.cacheGeometry(fieldId: job.id, boundaries: boundaries, sprayLines: sprayLines)
+                    print("✅ CACHED job \(job.id)")
+                }
+            } catch {
+                print("❌ ERROR downloading job \(job.id): \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // Batch download for Select All - downloads multiple fields in parallel
+    func downloadGeometryBatch(for jobs: [TabulaJob]) {
+        Task {
+            // Filter out already cached jobs
+            let jobsToDownload = jobs.filter { !FieldGeometryCache.shared.isCached(fieldId: $0.id) }
+
+            guard !jobsToDownload.isEmpty else { return }
+
+            print("⬇️ Batch downloading \(jobsToDownload.count) fields...")
+
+            // Download all fields in parallel (URLSession config allows up to 6 concurrent)
+            await withTaskGroup(of: Void.self) { group in
+                for job in jobsToDownload {
+                    group.addTask {
+                        await self.downloadSingleField(job)
+                    }
+                }
+            }
+
+            print("✅ Batch download complete - cached \(jobsToDownload.count) fields")
+        }
+    }
+
+    // Helper for batch downloads - non-isolated version
+    private func downloadSingleField(_ job: TabulaJob) async {
+        print("📥 downloadSingleField called for job \(job.id)")
+
+        // Skip if currently downloading
+        let shouldDownload = await MainActor.run {
+            guard !pendingDownloads.contains(job.id) else {
+                print("⚠️ Job \(job.id) already downloading")
+                return false
+            }
+            pendingDownloads.insert(job.id)
+            return true
+        }
+
+        guard shouldDownload else { return }
+
+        defer {
+            Task { @MainActor in
+                pendingDownloads.remove(job.id)
+            }
+        }
+
+        print("🚀 Starting download for job \(job.id)")
+
+        do {
+            // Download boundary and spray lines in parallel
+            try await withThrowingTaskGroup(of: (String, Data).self) { group in
+                group.addTask {
+                    print("📡 Fetching boundary for \(job.id)...")
+                    guard let url = URL(string: "http://192.168.68.226:3000/api/field-maps/\(job.id)/geometry?type=requested") else {
+                        throw URLError(.badURL)
+                    }
+                    let (data, response) = try await self.urlSession.data(from: url)
+                    guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                        print("❌ Boundary failed for \(job.id)")
+                        throw URLError(.badServerResponse)
+                    }
+                    print("✅ Got boundary for \(job.id)")
+                    return ("boundary", data)
+                }
+
+                group.addTask {
+                    print("📡 Fetching spray for \(job.id)...")
+                    guard let url = URL(string: "http://192.168.68.226:3000/api/field-maps/\(job.id)/geometry?type=worked-detailed") else {
+                        throw URLError(.badURL)
+                    }
+                    let (data, response) = try await self.urlSession.data(from: url)
+                    guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                        print("⚠️ No spray for \(job.id)")
+                        return ("spray", Data())
+                    }
+                    print("✅ Got spray for \(job.id)")
+                    return ("spray", data)
+                }
+
+                var boundaryData: Data?
+                var sprayData: Data?
+
+                for try await (type, data) in group {
+                    if type == "boundary" {
+                        boundaryData = data
+                    } else if type == "spray" {
+                        sprayData = data
+                    }
+                }
+
+                guard let boundaryData = boundaryData else {
+                    print("❌ No boundary data for \(job.id)")
+                    return
+                }
+
+                print("🔍 Parsing \(job.id)...")
+                let geometryResponse = try JSONDecoder().decode(GeometryAPIResponse.self, from: boundaryData)
+                let boundaries = geometryResponse.data.features.compactMap { $0.geometry.mapCoordinates }
+                print("✅ Parsed \(boundaries.count) boundaries for \(job.id)")
+
+                var sprayLines: [[CLLocationCoordinate2D]]? = nil
+                if let sprayData = sprayData, !sprayData.isEmpty {
+                    let workedGeometry = try? JSONDecoder().decode(GeometryAPIResponse.self, from: sprayData)
+                    sprayLines = workedGeometry?.data.features.compactMap { $0.geometry.mapCoordinates }
+                }
+
+                print("💾 Caching \(job.id)...")
+                FieldGeometryCache.shared.cacheGeometry(fieldId: job.id, boundaries: boundaries, sprayLines: sprayLines)
+                print("✅ CACHED \(job.id) successfully")
+            }
+        } catch {
+            print("❌ ERROR downloading \(job.id): \(error.localizedDescription)")
+        }
+    }
+
 }
 
 // MARK: - Preview
