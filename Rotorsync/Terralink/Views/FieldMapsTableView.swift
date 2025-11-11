@@ -708,7 +708,7 @@ struct FieldMapsTableView: View {
                             productList: job.productList,
                             notes: job.notes,
                             address: job.address,
-                            source: .tabula, crop: job.crop, nominalAcres: (job.grossCoverageArea ?? 0) * 2.47105 / Double(totalBoundaries),
+                            source: .tabula, crop: job.crop, nominalAcres: (job.grossCoverageArea ?? 0) * 2.47105,
                             workedCoordinates: sprayLines
                         )
                         fields.append(fieldData)
@@ -906,7 +906,7 @@ struct FieldMapsTableView: View {
                         productList: job.productList,
                         notes: job.notes,
                         address: job.address,
-                        source: .tabula, crop: job.crop, nominalAcres: (job.grossCoverageArea ?? 0) * 2.47105 / Double(totalBoundaries),
+                        source: .tabula, crop: job.crop, nominalAcres: (job.grossCoverageArea ?? 0) * 2.47105,
                         workedCoordinates: workedPolygons
                     )
                     fields.append(fieldData)
