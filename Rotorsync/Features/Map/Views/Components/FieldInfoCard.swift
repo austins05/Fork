@@ -7,7 +7,7 @@ struct FieldInfoCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(field.name)
+                    formatFieldName(field.name)
                         .font(.headline)
                         .foregroundColor(.primary)
                     
@@ -122,7 +122,7 @@ struct FieldInfoCard: View {
     // Crop color mapping
     private func cropColor(for crop: String) -> Color {
         let cropLower = crop.lowercased()
-        
+
         if cropLower.contains("corn") {
             return .yellow
         } else if cropLower.contains("soybean") || cropLower.contains("bean") {
@@ -144,5 +144,30 @@ struct FieldInfoCard: View {
         } else {
             return .green
         }
+    }
+
+    // Format field name to make last 3 digits of order ID bold
+    private func formatFieldName(_ name: String) -> Text {
+        // Pattern: match # followed by digits, extract last 3 digits to make bold
+        // Example: "Farm #12345 1/3" -> "Farm #12" + "345" (bold) + " 1/3"
+
+        if let range = name.range(of: "#\\d+", options: .regularExpression) {
+            let orderIdWithHash = String(name[range])
+            let orderIdDigits = orderIdWithHash.dropFirst() // Remove #
+
+            if orderIdDigits.count >= 3 {
+                let lastThreeIndex = orderIdDigits.index(orderIdDigits.endIndex, offsetBy: -3)
+                let beforeLastThree = orderIdDigits[..<lastThreeIndex]
+                let lastThree = orderIdDigits[lastThreeIndex...]
+
+                let beforeOrderId = String(name[..<range.lowerBound])
+                let afterOrderId = String(name[range.upperBound...])
+
+                return Text(beforeOrderId + "#" + beforeLastThree) + Text(lastThree).bold() + Text(afterOrderId)
+            }
+        }
+
+        // Fallback: return name as-is if pattern doesn't match
+        return Text(name)
     }
 }
