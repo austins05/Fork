@@ -8,7 +8,15 @@ struct FieldDetailsSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    detailRow(title: "Field Name", value: field.name)
+                    // Field Name with formatted order ID
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Field Name")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .textCase(.uppercase)
+                        formatFieldName(field.name)
+                            .font(.body)
+                    }
                     detailRow(title: "Req. Acres", value: String(format: "%.1f ac", field.acres))
                     
                     if let nominalAcres = field.nominalAcres, nominalAcres > 0 {
@@ -72,5 +80,34 @@ struct FieldDetailsSheet: View {
             Text(value)
                 .font(.body)
         }
+    }
+
+    // Format field name to make last 3 digits of order ID bold and bigger
+    private func formatFieldName(_ name: String) -> Text {
+        // Pattern: match # followed by digits, extract last 3 digits to make bold and bigger
+        // Example: "#37665 1/3" -> "#376" + "65" (bold+bigger) + " 1/3"
+
+        if let range = name.range(of: "#\\d+", options: .regularExpression) {
+            let orderIdWithHash = String(name[range])
+            let orderIdDigits = orderIdWithHash.dropFirst() // Remove #
+
+            if orderIdDigits.count >= 3 {
+                let lastThreeIndex = orderIdDigits.index(orderIdDigits.endIndex, offsetBy: -3)
+                let beforeLastThree = orderIdDigits[..<lastThreeIndex]
+                let lastThree = orderIdDigits[lastThreeIndex...]
+
+                let beforeOrderId = String(name[..<range.lowerBound])
+                let afterOrderId = String(name[range.upperBound...])
+
+                return Text(beforeOrderId + "#" + beforeLastThree)
+                    + Text(lastThree)
+                        .fontWeight(.heavy)
+                        .font(.system(size: 19))
+                    + Text(afterOrderId)
+            }
+        }
+
+        // Fallback: return name as-is if pattern doesn't match
+        return Text(name)
     }
 }
