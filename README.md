@@ -2,7 +2,7 @@
 
 ### 🚁 Helicopter Spray Line Visualization [NEW v2.0]
 - **Actual Flight Path Display**: Shows individual helicopter spray lines (LineString geometry)
-  - 53 spray line features per completed job
+  - Spray line features per completed job
   - Real-time visualization of actual flight paths
   - Rendered as MKPolyline overlays on field boundaries
 - **Automatic Color Contrast**: Spray lines automatically contrast with field background
