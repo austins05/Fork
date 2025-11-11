@@ -692,7 +692,7 @@ struct FieldMapsTableView: View {
                     let totalBoundaries = sortedBoundaries.count
 
                     for (index, boundary) in sortedBoundaries.enumerated() {
-                        let fieldName = totalBoundaries > 1 ? "\(job.name) \(index + 1)/\(totalBoundaries)" : job.name
+                        let fieldName = totalBoundaries > 1 ? "#\(job.id) \(index + 1)/\(totalBoundaries)" : "#\(job.id)"
                         let fieldData = FieldData(
                             id: job.id + index * 10000, jobId: job.id,  // Unique ID for each polygon
                             name: fieldName,
@@ -890,7 +890,7 @@ struct FieldMapsTableView: View {
                 let totalBoundaries = sortedBoundaryCoordinates.count
 
                 for (index, boundaryCoords) in sortedBoundaryCoordinates.enumerated() {
-                    let fieldName = totalBoundaries > 1 ? "\(job.name) \(index + 1)/\(totalBoundaries)" : job.name
+                    let fieldName = totalBoundaries > 1 ? "#\(job.id) \(index + 1)/\(totalBoundaries)" : "#\(job.id)"
                     let fieldData = FieldData(
                         id: job.id + index * 10000, jobId: job.id,  // Unique ID for each polygon
                         name: fieldName,
