@@ -3,10 +3,12 @@ import CoreLocation
 
 struct FieldData: Identifiable, Codable {
     let id: Int
+    let jobId: Int?  // Original job/order ID (for Tabula fields)
     let name: String
     let coordinates: [CLLocationCoordinate2D]
     let workedCoordinates: [[CLLocationCoordinate2D]]? // Multiple spray line polygons
-    let acres: Double
+    let acres: Double  // Requested acres
+    let nominalAcres: Double?  // Nominal/flown acres (gross coverage area)
     let color: String  // Fill color
     let boundaryColor: String?  // Stroke/outline color (optional)
     let contractorDashColor: String?  // Dashed border color for contractor (optional)
@@ -18,6 +20,7 @@ struct FieldData: Identifiable, Codable {
     let notes: String?
     let address: String?
     let source: FieldSource? // Track where field came from
+    let crop: String?
     
     // Source tracking for fields
     enum FieldSource: String, Codable {
@@ -25,16 +28,18 @@ struct FieldData: Identifiable, Codable {
         case mpz = "mpz"        // From MPZ Field Mapper
     }
 
-    init(id: Int, name: String, coordinates: [CLLocationCoordinate2D], acres: Double,
+    init(id: Int, jobId: Int? = nil, name: String, coordinates: [CLLocationCoordinate2D], acres: Double,
          color: String, boundaryColor: String? = nil, contractorDashColor: String? = nil,
          category: String?, application: String?, description: String?,
          prodDupli: String? = nil, productList: String? = nil, notes: String? = nil, address: String? = nil,
-         source: FieldSource? = nil, workedCoordinates: [[CLLocationCoordinate2D]]? = nil) {
+         source: FieldSource? = nil, crop: String? = nil, nominalAcres: Double? = nil, workedCoordinates: [[CLLocationCoordinate2D]]? = nil) {
         self.id = id
+        self.jobId = jobId
         self.name = name
         self.coordinates = coordinates
         self.workedCoordinates = workedCoordinates
         self.acres = acres
+        self.nominalAcres = nominalAcres
         self.color = color
         self.boundaryColor = boundaryColor
         self.contractorDashColor = contractorDashColor
@@ -46,11 +51,12 @@ struct FieldData: Identifiable, Codable {
         self.notes = notes
         self.address = address
         self.source = source
+        self.crop = crop
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, acres, color, boundaryColor, contractorDashColor, category, application, description
-        case prodDupli, productList, notes, address, source
+        case id, jobId, name, acres, nominalAcres, color, boundaryColor, contractorDashColor, category, application, description
+        case prodDupli, productList, notes, address, source, crop
         case coordinates, workedCoordinates
     }
 
@@ -62,8 +68,10 @@ struct FieldData: Identifiable, Codable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(Int.self, forKey: .id)
+        jobId = try c.decodeIfPresent(Int.self, forKey: .jobId)
         name = try c.decode(String.self, forKey: .name)
         acres = try c.decode(Double.self, forKey: .acres)
+        nominalAcres = try c.decodeIfPresent(Double.self, forKey: .nominalAcres)
         color = try c.decode(String.self, forKey: .color)
         boundaryColor = try c.decodeIfPresent(String.self, forKey: .boundaryColor)
         contractorDashColor = try c.decodeIfPresent(String.self, forKey: .contractorDashColor)
@@ -75,6 +83,7 @@ struct FieldData: Identifiable, Codable {
         notes = try c.decodeIfPresent(String.self, forKey: .notes)
         address = try c.decodeIfPresent(String.self, forKey: .address)
         source = try c.decodeIfPresent(FieldSource.self, forKey: .source)
+        crop = try c.decodeIfPresent(String.self, forKey: .crop)
         let coords = try c.decode([Coordinate].self, forKey: .coordinates)
         coordinates = coords.map { CLLocationCoordinate2D(latitude: $0.latitude,
                                                          longitude: $0.longitude) }
@@ -90,8 +99,10 @@ struct FieldData: Identifiable, Codable {
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(id, forKey: .id)
+        try c.encodeIfPresent(jobId, forKey: .jobId)
         try c.encode(name, forKey: .name)
         try c.encode(acres, forKey: .acres)
+        try c.encodeIfPresent(nominalAcres, forKey: .nominalAcres)
         try c.encode(color, forKey: .color)
         try c.encodeIfPresent(boundaryColor, forKey: .boundaryColor)
         try c.encodeIfPresent(contractorDashColor, forKey: .contractorDashColor)
@@ -103,6 +114,7 @@ struct FieldData: Identifiable, Codable {
         try c.encodeIfPresent(notes, forKey: .notes)
         try c.encodeIfPresent(address, forKey: .address)
         try c.encodeIfPresent(source, forKey: .source)
+        try c.encodeIfPresent(crop, forKey: .crop)
         let coords = coordinates.map { Coordinate(latitude: $0.latitude,
                                                   longitude: $0.longitude) }
         try c.encode(coords, forKey: .coordinates)

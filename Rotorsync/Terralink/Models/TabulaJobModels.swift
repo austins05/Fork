@@ -15,7 +15,8 @@ struct TabulaJob: Identifiable, Codable {
     let name: String
     let customer: String
     let contractor: String?
-    let area: Double
+    let area: Double  // Requested area
+    let grossCoverageArea: Double?  // Nominal/worked area (optional)
     let status: String
     let orderNumber: String
     let requestedUrl: String?
@@ -30,12 +31,12 @@ struct TabulaJob: Identifiable, Codable {
     let notes: String
     let deleted: Bool
     let rts: Bool
-
+    let crop: String?
     enum CodingKeys: String, CodingKey {
-        case id, name, customer, contractor, area, status
+        case id, name, customer, contractor, area, grossCoverageArea, status
         case orderNumber, requestedUrl, workedUrl
         case modifiedDate, dueDate, productList, prodDupli, color, boundaryColor
-        case address, notes, deleted, rts
+        case address, notes, deleted, rts, crop
     }
 
     // Computed properties

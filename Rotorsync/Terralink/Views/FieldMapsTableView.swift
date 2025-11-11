@@ -409,7 +409,7 @@ struct FieldMapsTableView: View {
                     Divider()
                     TableHeaderCell(title: "Order ID", width: 70)
                     Divider()
-                    TableHeaderCell(title: "RTS", width: 50)
+                    TableHeaderCell(title: "RTS", width: 50, backgroundColor: rtsFilter == "Yes" ? .green : (rtsFilter == "No" ? .red : nil), onTap: { cycleRTSFilter() })
                     Divider()
                     TableHeaderCell(title: "Req. Area", width: 80)
                     Divider()
@@ -564,6 +564,20 @@ struct FieldMapsTableView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+
+    private func cycleRTSFilter() {
+        switch rtsFilter {
+        case "All":
+            rtsFilter = "Yes"
+        case "Yes":
+            rtsFilter = "No"
+        case "No":
+            rtsFilter = "All"
+        default:
+            rtsFilter = "All"
+        }
+    }
+
     private func statusColor(for status: String) -> Color {
         switch status.lowercased() {
         case "complete": return .green
@@ -677,7 +691,7 @@ struct FieldMapsTableView: View {
                     for (index, boundary) in boundaries.enumerated() {
                         let fieldName = boundaries.count > 1 ? "\(job.name) (\(index + 1))" : job.name
                         let fieldData = FieldData(
-                            id: job.id + index * 10000,  // Unique ID for each polygon
+                            id: job.id + index * 10000, jobId: job.id,  // Unique ID for each polygon
                             name: fieldName,
                             coordinates: boundary,
                             acres: job.area * 2.47105 / Double(boundaries.count),  // Divide area
@@ -691,7 +705,7 @@ struct FieldMapsTableView: View {
                             productList: job.productList,
                             notes: job.notes,
                             address: job.address,
-                            source: .tabula,
+                            source: .tabula, crop: job.crop, nominalAcres: (job.grossCoverageArea ?? 0) * 2.47105 / Double(boundaries.count),
                             workedCoordinates: sprayLines
                         )
                         fields.append(fieldData)
@@ -872,7 +886,7 @@ struct FieldMapsTableView: View {
                 for (index, boundaryCoords) in boundaryCoordinates.enumerated() {
                     let fieldName = boundaryCoordinates.count > 1 ? "\(job.name) (\(index + 1))" : job.name
                     let fieldData = FieldData(
-                        id: job.id + index * 10000,  // Unique ID for each polygon
+                        id: job.id + index * 10000, jobId: job.id,  // Unique ID for each polygon
                         name: fieldName,
                         coordinates: boundaryCoords,
                         acres: job.area * 2.47105 / Double(boundaryCoordinates.count), // Divide area
@@ -886,7 +900,7 @@ struct FieldMapsTableView: View {
                         productList: job.productList,
                         notes: job.notes,
                         address: job.address,
-                        source: .tabula,
+                        source: .tabula, crop: job.crop, nominalAcres: (job.grossCoverageArea ?? 0) * 2.47105 / Double(boundaryCoordinates.count),
                         workedCoordinates: workedPolygons
                     )
                     fields.append(fieldData)
@@ -952,15 +966,24 @@ struct FieldMapsTableView: View {
 struct TableHeaderCell: View {
     let title: String
     let width: CGFloat
+    var backgroundColor: Color? = nil
+    var onTap: (() -> Void)? = nil
 
     var body: some View {
         Text(title)
             .font(.subheadline)
             .fontWeight(.semibold)
+            .foregroundColor(backgroundColor != nil ? .white : .primary)
             .frame(width: width, alignment: .leading)
             .padding(.horizontal, 8)
             .padding(.vertical, 12)
             .lineLimit(2)
+            .background(backgroundColor)
+            .cornerRadius(4)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onTap?()
+            }
     }
 }
 
@@ -1154,6 +1177,19 @@ class FieldMapsTableViewModel: ObservableObject {
     }
 
     func refreshData() async {
+        // Trigger backend sync to refresh Tabula data
+        print("🔄 Triggering backend sync...")
+        do {
+            let syncSuccess = try await TabulaAPIService.shared.triggerSync(customerId: "5429")
+            if syncSuccess {
+                print("✅ Backend sync successful")
+            } else {
+                print("⚠️ Backend sync returned false")
+            }
+        } catch {
+            print("❌ Backend sync error: \(error.localizedDescription)")
+        }
+        
         // Clear all cached geometry to force fresh downloads
         FieldGeometryCache.shared.clearCache()
         print("🗑️ Cleared all cached geometry")

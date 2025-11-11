@@ -9,7 +9,15 @@ struct FieldDetailsSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     detailRow(title: "Field Name", value: field.name)
-                    detailRow(title: "Area", value: String(format: "%.1f ac", field.acres))
+                    detailRow(title: "Req. Acres", value: String(format: "%.1f ac", field.acres))
+                    
+                    if let nominalAcres = field.nominalAcres, nominalAcres > 0 {
+                        detailRow(title: "Nominal Acres", value: String(format: "%.1f ac", nominalAcres))
+                    }
+                    
+                    if let crop = field.crop, !crop.isEmpty {
+                        detailRow(title: "Crop Type", value: crop)
+                    }
                     
                     if let prodDupli = field.prodDupli, !prodDupli.isEmpty {
                         detailRow(title: "Prod Dupli", value: prodDupli)
