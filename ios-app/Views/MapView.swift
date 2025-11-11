@@ -183,6 +183,14 @@ struct MapView: View {
                     showAlert(title: "Fields Imported", message: "Added \(count) fields from Tabula to map")
                 }
             }
+            .onReceive(SharedFieldStorage.shared.$shouldClearAllFields) { shouldClear in
+                if shouldClear {
+                    let count = importedFields.count
+                    importedFields.removeAll()
+                    SharedFieldStorage.shared.shouldClearAllFields = false
+                    showAlert(title: "Fields Cleared", message: "Removed \(count) field\(count == 1 ? "" : "s") from map")
+                }
+            }
             .id(refreshTrigger)
             
             CrosshairOverlay(

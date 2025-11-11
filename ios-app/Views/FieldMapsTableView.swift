@@ -10,7 +10,7 @@ import CoreLocation
 struct FieldMapsTableView: View {
     @StateObject private var viewModel = FieldMapsTableViewModel()
     @State private var selectedJobs: Set<Int> = []
-    @State private var isSelectionMode = false
+    @State private var hasLoadedData = false
 
     // Filter states
     @State private var customerFilter = ""
@@ -28,7 +28,7 @@ struct FieldMapsTableView: View {
         NavigationView {
             VStack(spacing: 0) {
                 // Selection toolbar
-                if isSelectionMode && !selectedJobs.isEmpty {
+                if !selectedJobs.isEmpty {
                     selectionToolbar
                 }
 
@@ -44,20 +44,19 @@ struct FieldMapsTableView: View {
             .navigationTitle("Field Maps")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        isSelectionMode.toggle()
-                        if !isSelectionMode {
-                            selectedJobs.removeAll()
-                        }
+                        SharedFieldStorage.shared.clearAllFields()
                     }) {
-                        Text(isSelectionMode ? "Done" : "Select")
+                        Label("Clear All Fields", systemImage: "trash.fill")
+                            .foregroundColor(.red)
                     }
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         Task {
+                            hasLoadedData = true // Keep flag true to prevent auto-reload
                             await viewModel.refreshData()
                         }
                     }) {
@@ -67,6 +66,8 @@ struct FieldMapsTableView: View {
                 }
             }
             .task {
+                guard !hasLoadedData else { return }
+                hasLoadedData = true
                 await viewModel.loadInitialData()
             }
             .alert("Error", isPresented: $viewModel.showError) {
@@ -225,10 +226,11 @@ struct FieldMapsTableView: View {
             VStack(alignment: .leading, spacing: 0) {
                 // Header Row
                 HStack(spacing: 0) {
-                    if isSelectionMode {
-                        TableHeaderCell(title: "", width: 50)
-                        Divider()
-                    }
+                    Text("")
+                        .frame(width: 50, alignment: .leading)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 12)
+                    Divider()
                     TableHeaderCell(title: "Customer Name", width: 180)
                     Divider()
                     TableHeaderCell(title: "Contractor Name", width: 180)
@@ -253,10 +255,11 @@ struct FieldMapsTableView: View {
 
                 // Filter Row
                 HStack(spacing: 0) {
-                    if isSelectionMode {
-                        Color.clear.frame(width: 50)
-                        Divider()
-                    }
+                    Color.clear
+                        .frame(width: 50, alignment: .leading)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                    Divider()
                     FilterTextField(text: $customerFilter, placeholder: "Filter this column...", width: 180)
                     Divider()
                     FilterTextField(text: $contractorFilter, placeholder: "Filter this column...", width: 180)
@@ -296,21 +299,21 @@ struct FieldMapsTableView: View {
                 // Data Rows
                 ForEach(filteredFieldMaps) { fieldMap in
                     HStack(spacing: 0) {
-                        if isSelectionMode {
-                            Button(action: {
-                                if selectedJobs.contains(fieldMap.id) {
-                                    selectedJobs.remove(fieldMap.id)
-                                } else {
-                                    selectedJobs.insert(fieldMap.id)
-                                }
-                            }) {
-                                Image(systemName: selectedJobs.contains(fieldMap.id) ? "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(selectedJobs.contains(fieldMap.id) ? .blue : .gray)
-                                    .font(.system(size: 20))
-                                    .frame(width: 50)
+                        Button(action: {
+                            if selectedJobs.contains(fieldMap.id) {
+                                selectedJobs.remove(fieldMap.id)
+                            } else {
+                                selectedJobs.insert(fieldMap.id)
                             }
-                            Divider()
+                        }) {
+                            Image(systemName: selectedJobs.contains(fieldMap.id) ? "checkmark.circle.fill" : "circle")
+                                .foregroundColor(selectedJobs.contains(fieldMap.id) ? .blue : .gray)
+                                .font(.system(size: 20))
+                                .frame(width: 50)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 10)
                         }
+                        Divider()
 
                         TableCell(text: fieldMap.customer, width: 180)
                         Divider()
@@ -324,7 +327,7 @@ struct FieldMapsTableView: View {
                         Divider()
                         TableCell(text: fieldMap.status.capitalized, width: 120, color: statusColor(for: fieldMap.status))
                         Divider()
-                        TableCell(text: fieldMap.productList.isEmpty ? "-" : fieldMap.productList, width: 250)
+                        TableCell(text: fieldMap.prodDupli ?? "-", width: 250)
                         Divider()
                         TableCell(text: fieldMap.notes.isEmpty ? "-" : fieldMap.notes, width: 200)
                         Divider()
@@ -332,7 +335,7 @@ struct FieldMapsTableView: View {
                         Divider()
                         TableCell(text: fieldMap.address.isEmpty ? "-" : fieldMap.address, width: 200)
                     }
-                    .background(selectedJobs.contains(fieldMap.id) && isSelectionMode ? Color.blue.opacity(0.1) : Color(.systemBackground))
+                    .background(selectedJobs.contains(fieldMap.id) ? Color.blue.opacity(0.1) : Color(.systemBackground))
 
                     Divider()
                 }
@@ -390,39 +393,97 @@ struct FieldMapsTableView: View {
 
         do {
             var fields: [FieldData] = []
+            var errors: [String] = []
 
             for jobId in selectedJobs {
-                guard let job = viewModel.fieldMaps.first(where: { $0.id == jobId }) else { continue }
+                guard let job = viewModel.fieldMaps.first(where: { $0.id == jobId }) else {
+                    errors.append("Job \(jobId) not found")
+                    continue
+                }
 
                 // Fetch geometry from backend
                 let url = URL(string: "http://192.168.68.226:3000/api/field-maps/\(jobId)/geometry?type=requested")!
-                let (data, _) = try await URLSession.shared.data(from: url)
+                let (data, response) = try await URLSession.shared.data(from: url)
 
-                // Parse GeoJSON
-                if let geojson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let geometry = geojson["geometry"] as? [String: Any],
-                   let coordinates = parseGeoJSONCoordinates(geometry) {
-
-                    let fieldData = FieldData(
-                        id: job.id,
-                        name: job.name,
-                        coordinates: coordinates,
-                        acres: job.area * 2.47105, // Convert hectares to acres
-                        color: "#00FF7F",
-                        category: job.status,
-                        application: job.productList,
-                        description: job.notes,
-                        source: .tabula
-                    )
-                    fields.append(fieldData)
+                // Check HTTP status
+                if let httpResponse = response as? HTTPURLResponse {
+                    print("📡 Job \(jobId) response: \(httpResponse.statusCode)")
+                    if httpResponse.statusCode != 200 {
+                        if let errorMsg = String(data: data, encoding: .utf8) {
+                            print("❌ Error response: \(errorMsg)")
+                            errors.append("Job \(jobId): HTTP \(httpResponse.statusCode)")
+                        }
+                        continue
+                    }
                 }
+
+                // Debug: Print raw response
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("📦 Raw response for job \(jobId): \(jsonString.prefix(200))...")
+                }
+
+                // Parse GeoJSON - API returns: {success, data: {features: [{geometry, properties}]}}
+                guard let response = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                    errors.append("Job \(jobId): Invalid JSON")
+                    print("❌ Failed to parse JSON for job \(jobId)")
+                    continue
+                }
+
+                guard let responseData = response["data"] as? [String: Any] else {
+                    errors.append("Job \(jobId): Missing data field")
+                    print("❌ No 'data' field in response for job \(jobId)")
+                    continue
+                }
+
+                guard let features = responseData["features"] as? [[String: Any]], !features.isEmpty else {
+                    errors.append("Job \(jobId): No features found")
+                    print("❌ No features in data for job \(jobId)")
+                    continue
+                }
+
+                guard let firstFeature = features.first,
+                      let geometry = firstFeature["geometry"] as? [String: Any] else {
+                    errors.append("Job \(jobId): Invalid feature geometry")
+                    print("❌ Invalid geometry for job \(jobId)")
+                    continue
+                }
+
+                guard let coordinates = parseGeoJSONCoordinates(geometry) else {
+                    errors.append("Job \(jobId): Failed to parse coordinates")
+                    print("❌ Failed to parse coordinates for job \(jobId)")
+                    continue
+                }
+
+                // Use Color custom field from Tabula API and convert to hex
+                let colorName = job.color ?? ""
+                let color = convertColorNameToHex(colorName)
+
+                let fieldData = FieldData(
+                    id: job.id,
+                    name: job.name,
+                    coordinates: coordinates,
+                    acres: job.area * 2.47105, // Convert hectares to acres
+                    color: color,
+                    category: job.status,
+                    application: job.productList,
+                    description: job.notes,
+                    source: .tabula
+                )
+                fields.append(fieldData)
+                print("✅ Successfully parsed job \(jobId)")
             }
 
             // Import to map using shared storage
             await MainActor.run {
-                SharedFieldStorage.shared.addFieldsForImport(fields)
-                viewModel.errorMessage = "Imported \(fields.count) fields to Map tab"
-                viewModel.showError = true
+                if fields.isEmpty {
+                    viewModel.errorMessage = "Failed to import any fields. Errors: \(errors.joined(separator: ", "))"
+                    viewModel.showError = true
+                } else {
+                    SharedFieldStorage.shared.addFieldsForImport(fields)
+                    print("✅ Successfully imported \(fields.count) field(s) to Map tab")
+                    // Clear selection after successful import
+                    selectedJobs.removeAll()
+                }
             }
 
         } catch {
@@ -546,6 +607,36 @@ class FieldMapsTableViewModel: ObservableObject {
     func refreshData() async {
         await loadTestData()
     }
+}
+
+// MARK: - Helper Functions
+
+/// Convert Tracmap color name to hex code
+func convertColorNameToHex(_ colorName: String) -> String {
+    let name = colorName.lowercased().trimmingCharacters(in: .whitespaces)
+
+    let colorMap: [String: String] = [
+        "red": "#FF0000",
+        "orange": "#FF8C00",
+        "yellow": "#FFFF00",
+        "green": "#00FF00",
+        "teal": "#00FFFF",
+        "blue": "#0000FF",
+        "purple": "#9966FF",
+        "pink": "#FF69B4",
+        "gray": "#808080",
+        "grey": "#808080",
+        "white": "#FFFFFF",
+        "black": "#000000"
+    ]
+
+    // If it's already a hex code, return it
+    if name.hasPrefix("#") {
+        return colorName
+    }
+
+    // Otherwise map the color name to hex
+    return colorMap[name] ?? "#00FF7F"  // Default to green
 }
 
 // MARK: - Preview

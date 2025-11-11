@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 
 const customerRoutes = require('./routes/customers');
 const fieldMapRoutes = require('./routes/fieldMaps');
+const monitorRoutes = require('./routes/monitor');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -26,7 +27,7 @@ app.use(cors(corsOptions));
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 500, // Limit each IP to 500 requests per windowMs (increased for bulk imports)
   message: 'Too many requests from this IP, please try again later.'
 });
 app.use('/api/', limiter);
@@ -50,6 +51,7 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/customers', customerRoutes);
 app.use('/api/field-maps', fieldMapRoutes);
+app.use('/api/monitor', monitorRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {

@@ -22,6 +22,8 @@ struct TabulaJob: Identifiable, Codable {
     let modifiedDate: TimeInterval
     let dueDate: TimeInterval?
     let productList: String
+    let prodDupli: String?
+    let color: String?
     let address: String
     let notes: String
     let deleted: Bool
@@ -30,7 +32,7 @@ struct TabulaJob: Identifiable, Codable {
     enum CodingKeys: String, CodingKey {
         case id, name, customer, area, status
         case orderNumber, requestedUrl, workedUrl
-        case modifiedDate, dueDate, productList
+        case modifiedDate, dueDate, productList, prodDupli, color
         case address, notes, deleted, rts
     }
 
