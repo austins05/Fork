@@ -244,6 +244,37 @@ class TabulaAPIService: ObservableObject {
 
         return (200...299).contains(httpResponse.statusCode)
     }
+
+    // MARK: - Sync Methods
+
+    /// Trigger backend sync to refresh data from Tabula
+    func triggerSync(customerId: String? = nil) async throws -> Bool {
+        guard let url = URL(string: "\(baseURL)/monitor/sync") else {
+            throw APIError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        if let customerId = customerId {
+            let body = ["customerId": customerId]
+            request.httpBody = try JSONEncoder().encode(body)
+        }
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.invalidResponse
+        }
+
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let success = json?["success"] as? Bool ?? false
+
+        print("✅ Backend sync completed: \(success)")
+        return success
+    }
 }
 
 // MARK: - API Error Types

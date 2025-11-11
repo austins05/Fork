@@ -74,7 +74,7 @@ struct FieldMapPreviewSheet: View {
                             DetailRow(label: "Contractor", value: contractor)
                         }
                         DetailRow(label: "Status", value: job.status.capitalized)
-                        DetailRow(label: "RTS", value: job.rts ? "Yes" : "No")
+                        DetailRow(label: "RTS", value: job.rts ? "Yes" : "No", valueColor: job.rts ? .green : .red)
                         DetailRow(label: "Area", value: String(format: "%.2f acres", job.area * 2.47105))
 
                         if let color = job.color, !color.isEmpty {
@@ -241,6 +241,7 @@ struct FieldMapPreviewSheet: View {
 struct DetailRow: View {
     let label: String
     let value: String
+    var valueColor: Color? = nil
 
     var body: some View {
         HStack(alignment: .top) {
@@ -250,6 +251,8 @@ struct DetailRow: View {
                 .frame(width: 120, alignment: .leading)
             Text(value)
                 .font(.subheadline)
+                .foregroundColor(valueColor ?? .primary)
+                .fontWeight(valueColor != nil ? .semibold : .regular)
             Spacer()
         }
     }

@@ -26,6 +26,7 @@ struct OverlaySettingsView: View {
     @Binding var showTemperatureGraph: Bool
     @Binding var temperatureGraphPosition: TemperatureGraphPosition
     @Binding var temperatureGraphScale: CGFloat
+    @Binding var mapStyle: AppMapStyle
 
     var body: some View {
         VStack(spacing: 12) {
@@ -33,6 +34,35 @@ struct OverlaySettingsView: View {
                 .font(.title2)
                 .fontWeight(.bold)
                 .padding(.bottom, 5)
+
+            // Map Style Section
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Map Style")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                HStack(spacing: 8) {
+                    ForEach(AppMapStyle.allCases, id: \.self) { style in
+                        Button {
+                            mapStyle = style
+                        } label: {
+                            Text(style.displayName)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(mapStyle == style ? .white : .blue)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(mapStyle == style ? Color.blue : Color.blue.opacity(0.1))
+                                )
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+
+            Divider()
+                .padding(.horizontal, 20)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("Overlay Size (\(String(format: "%.1f", overlayScale))x)")

@@ -14,7 +14,6 @@ struct MapView: View {
     @StateObject private var viewModel = MapViewModel()
     
     @State private var mapStyle: AppMapStyle = .hybrid
-    @State private var showMapStyleDialog = false
     @State private var showSettingsSheet = false
     @State private var overlayScale: CGFloat = 1.0
     @State private var shareLocation: Bool = true
@@ -388,22 +387,6 @@ struct MapView: View {
     
     @ViewBuilder private func bottomButtonsView() -> some View {
         VStack(spacing: 15) {
-            Button { showMapStyleDialog.toggle() } label: {
-                Image(systemName: "square.3.layers.3d")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding()
-                    .background(Color.black.opacity(0.6))
-                    .clipShape(Circle())
-                    .shadow(radius: 5)
-            }
-            .confirmationDialog("Select Map Type", isPresented: $showMapStyleDialog, titleVisibility: .visible) {
-                ForEach(AppMapStyle.allCases, id: \.self) { style in
-                    Button(style.displayName) { mapStyle = style }
-                }
-                Button("Cancel", role: .cancel) {}
-            }
-
             Button { showSettingsSheet.toggle() } label: {
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: 22, weight: .semibold))
@@ -419,11 +402,11 @@ struct MapView: View {
                     shareLocation: $shareLocation,
                     showTemperatureGraph: $showTemperatureGraph,
                     temperatureGraphPosition: $temperatureGraphPosition,
-                    temperatureGraphScale: $temperatureGraphScale
+                    temperatureGraphScale: $temperatureGraphScale,
+                    mapStyle: $mapStyle
                 )
                 .presentationDetents([.fraction(0.55)])
             }
-
             Button { showImport = true } label: {
                 Image(systemName: "arrow.down.doc.fill")
                     .font(.system(size: 22, weight: .semibold))

@@ -328,7 +328,7 @@ struct MapRepresentable: UIViewRepresentable {
                                 let dashCol = Color(hex: contractorDashHex)
                                 r.strokeColor = UIColor(dashCol)
                                 r.fillColor = .clear  // No fill - transparent overlay
-                                r.lineDashPattern = [5, 10]  // 5pt dash, 10pt gap
+                                r.lineDashPattern = [3, 16]  // 3pt dash, 16pt gap
                                 r.lineWidth = 5
                                 print("🔲 Rendering contractor dash overlay: \(contractorDashHex)")
                                 return r
