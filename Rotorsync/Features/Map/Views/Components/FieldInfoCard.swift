@@ -146,10 +146,10 @@ struct FieldInfoCard: View {
         }
     }
 
-    // Format field name to make last 3 digits of order ID bold
+    // Format field name to make last 3 digits of order ID bold and bigger
     private func formatFieldName(_ name: String) -> Text {
-        // Pattern: match # followed by digits, extract last 3 digits to make bold
-        // Example: "Farm #12345 1/3" -> "Farm #12" + "345" (bold) + " 1/3"
+        // Pattern: match # followed by digits, extract last 3 digits to make bold and bigger
+        // Example: "#37665 1/3" -> "#376" + "65" (bold+bigger) + " 1/3"
 
         if let range = name.range(of: "#\\d+", options: .regularExpression) {
             let orderIdWithHash = String(name[range])
@@ -163,7 +163,11 @@ struct FieldInfoCard: View {
                 let beforeOrderId = String(name[..<range.lowerBound])
                 let afterOrderId = String(name[range.upperBound...])
 
-                return Text(beforeOrderId + "#" + beforeLastThree) + Text(lastThree).bold() + Text(afterOrderId)
+                return Text(beforeOrderId + "#" + beforeLastThree)
+                    + Text(lastThree)
+                        .fontWeight(.heavy)
+                        .font(.system(size: 19))
+                    + Text(afterOrderId)
             }
         }
 
