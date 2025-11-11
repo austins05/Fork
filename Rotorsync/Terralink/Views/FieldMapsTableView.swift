@@ -687,14 +687,17 @@ struct FieldMapsTableView: View {
                         print("ℹ️ No contractor dash color set for job \(jobId)")
                     }
 
-                    // Create a field entry for each boundary polygon
-                    for (index, boundary) in boundaries.enumerated() {
-                        let fieldName = boundaries.count > 1 ? "\(job.name) (\(index + 1))" : job.name
+                    // Sort boundaries by area (largest first) and create field entries
+                    let sortedBoundaries = boundaries.sorted { calculatePolygonArea($0) > calculatePolygonArea($1) }
+                    let totalBoundaries = sortedBoundaries.count
+
+                    for (index, boundary) in sortedBoundaries.enumerated() {
+                        let fieldName = totalBoundaries > 1 ? "\(job.name) \(index + 1)/\(totalBoundaries)" : job.name
                         let fieldData = FieldData(
                             id: job.id + index * 10000, jobId: job.id,  // Unique ID for each polygon
                             name: fieldName,
                             coordinates: boundary,
-                            acres: job.area * 2.47105 / Double(boundaries.count),  // Divide area
+                            acres: job.area * 2.47105 / Double(totalBoundaries),  // Divide area
                             color: fillColor,  // Fill color
                             boundaryColor: strokeColor,  // Stroke color (nil means use fill color)
                             contractorDashColor: contractorDash,  // Dashed border for contractor
@@ -705,7 +708,7 @@ struct FieldMapsTableView: View {
                             productList: job.productList,
                             notes: job.notes,
                             address: job.address,
-                            source: .tabula, crop: job.crop, nominalAcres: (job.grossCoverageArea ?? 0) * 2.47105 / Double(boundaries.count),
+                            source: .tabula, crop: job.crop, nominalAcres: (job.grossCoverageArea ?? 0) * 2.47105 / Double(totalBoundaries),
                             workedCoordinates: sprayLines
                         )
                         fields.append(fieldData)
@@ -882,14 +885,17 @@ struct FieldMapsTableView: View {
                     print("ℹ️ No contractor dash color set for job \(jobId)")
                 }
 
-                // Create a field entry for each boundary polygon
-                for (index, boundaryCoords) in boundaryCoordinates.enumerated() {
-                    let fieldName = boundaryCoordinates.count > 1 ? "\(job.name) (\(index + 1))" : job.name
+                // Sort boundaries by area (largest first) and create field entries
+                let sortedBoundaryCoordinates = boundaryCoordinates.sorted { calculatePolygonArea($0) > calculatePolygonArea($1) }
+                let totalBoundaries = sortedBoundaryCoordinates.count
+
+                for (index, boundaryCoords) in sortedBoundaryCoordinates.enumerated() {
+                    let fieldName = totalBoundaries > 1 ? "\(job.name) \(index + 1)/\(totalBoundaries)" : job.name
                     let fieldData = FieldData(
                         id: job.id + index * 10000, jobId: job.id,  // Unique ID for each polygon
                         name: fieldName,
                         coordinates: boundaryCoords,
-                        acres: job.area * 2.47105 / Double(boundaryCoordinates.count), // Divide area
+                        acres: job.area * 2.47105 / Double(totalBoundaries), // Divide area
                         color: fillColor,  // Fill color
                         boundaryColor: strokeColor,  // Stroke color (nil means use fill color)
                         contractorDashColor: contractorDash,  // Dashed border for contractor
@@ -900,12 +906,12 @@ struct FieldMapsTableView: View {
                         productList: job.productList,
                         notes: job.notes,
                         address: job.address,
-                        source: .tabula, crop: job.crop, nominalAcres: (job.grossCoverageArea ?? 0) * 2.47105 / Double(boundaryCoordinates.count),
+                        source: .tabula, crop: job.crop, nominalAcres: (job.grossCoverageArea ?? 0) * 2.47105 / Double(totalBoundaries),
                         workedCoordinates: workedPolygons
                     )
                     fields.append(fieldData)
                 }
-                print("✅ Successfully parsed job \(jobId) - \(boundaryCoordinates.count) boundaries")
+                print("✅ Successfully parsed job \(jobId) - \(totalBoundaries) boundaries")
 
                 // Update progress
                 await MainActor.run {
@@ -1417,6 +1423,25 @@ class FieldMapsTableViewModel: ObservableObject {
         }
     }
 
+}
+
+// MARK: - Helper Functions
+
+/// Calculate the approximate area of a polygon using the Shoelace formula
+/// Returns area in square degrees (approximate, good enough for sorting)
+private func calculatePolygonArea(_ coordinates: [CLLocationCoordinate2D]) -> Double {
+    guard coordinates.count >= 3 else { return 0 }
+
+    var area: Double = 0
+    let n = coordinates.count
+
+    for i in 0..<n {
+        let j = (i + 1) % n
+        area += coordinates[i].longitude * coordinates[j].latitude
+        area -= coordinates[j].longitude * coordinates[i].latitude
+    }
+
+    return abs(area / 2.0)
 }
 
 // MARK: - Preview
