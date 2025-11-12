@@ -14,6 +14,8 @@ struct MapRepresentable: UIViewRepresentable {
     @Binding var userTrackingMode: MKUserTrackingMode
     @Binding var mapCenter: CLLocationCoordinate2D?
     @Binding var shouldForceUpdate: Bool
+    @Binding var isMeasuring: Bool
+    @Binding var measurementPins: [(coordinate: CLLocationCoordinate2D, name: String)]
 
     let devices: [Device]
     let onPinTapped: (DroppedPinViewModel) -> Void
@@ -21,6 +23,7 @@ struct MapRepresentable: UIViewRepresentable {
     let onDeviceTapped: (Device) -> Void
     let onFieldTapped: (FieldData) -> Void
     let onLongPressPinDropped: (CLLocationCoordinate2D, String) -> Void
+    let onMeasurementTap: (CLLocationCoordinate2D) -> Void
 
     func makeUIView(context: Context) -> MKMapView {
         let mv = MKMapView()
@@ -156,7 +159,13 @@ struct MapRepresentable: UIViewRepresentable {
             let mv = gesture.view as! MKMapView
             let pt = gesture.location(in: mv)
             let coord = mv.convert(pt, toCoordinateFrom: mv)
-            
+
+            // If in measurement mode, drop a measurement pin
+            if parent.isMeasuring {
+                parent.onMeasurementTap(coord)
+                return
+            }
+
             // Check if tap is inside any field polygon
             for field in parent.importedFields {
                 let polygon = MKPolygon(coordinates: field.coordinates, count: field.coordinates.count)
@@ -174,8 +183,8 @@ struct MapRepresentable: UIViewRepresentable {
         func updateAnnotations(_ mapView: MKMapView, parent: MapRepresentable) {
             // Only update if pins/devices actually changed
             let currentAnnotations = mapView.annotations.filter { !($0 is MKUserLocation) }
-            let expectedCount = parent.droppedPins.count + parent.groupPins.count + parent.devices.count
-            
+            let expectedCount = parent.droppedPins.count + parent.groupPins.count + parent.devices.count + parent.measurementPins.count
+
             // Only refresh annotations if count changed
             if currentAnnotations.count != expectedCount {
                 mapView.removeAnnotations(currentAnnotations)
@@ -205,6 +214,15 @@ struct MapRepresentable: UIViewRepresentable {
                     a.coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
                     a.title = device.displayName
                     a.subtitle = "device"
+                    mapView.addAnnotation(a)
+                }
+
+                // Add measurement pins
+                for pin in parent.measurementPins {
+                    let a = MKPointAnnotation()
+                    a.coordinate = pin.coordinate
+                    a.title = pin.name
+                    a.subtitle = "measurement_pin"
                     mapView.addAnnotation(a)
                 }
             }
@@ -271,12 +289,31 @@ struct MapRepresentable: UIViewRepresentable {
                 let line = MKPolyline(coordinates: parent.path, count: parent.path.count)
                 mapView.addOverlay(line)
             }
+
+            // Add measurement lines between pins
+            if parent.measurementPins.count > 1 {
+                for i in 0..<(parent.measurementPins.count - 1) {
+                    let coords = [parent.measurementPins[i].coordinate, parent.measurementPins[i + 1].coordinate]
+                    let line = MKPolyline(coordinates: coords, count: 2)
+                    line.title = "measurement_line"
+                    line.subtitle = "measurement_segment_\(i)"
+                    mapView.addOverlay(line)
+                }
+            }
         }
 
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
             // Handle MKPolyline (spray lines)
             if let polyline = overlay as? MKPolyline {
                 let r = MKPolylineRenderer(polyline: polyline)
+
+                // Check if it's a measurement line
+                if polyline.title == "measurement_line" {
+                    r.strokeColor = UIColor.systemYellow
+                    r.lineWidth = 4
+                    r.lineDashPattern = [8, 4] // Dashed line
+                    return r
+                }
 
                 // Check if it's a spray line
                 if let subtitle = polyline.subtitle, subtitle.starts(with: "spray_line_") {
@@ -389,12 +426,9 @@ struct MapRepresentable: UIViewRepresentable {
                 r.strokeColor = UIColor.red
                 r.lineWidth = 3
                 return r
-            } else if let line = overlay as? MKPolyline {
-                let r = MKPolylineRenderer(polyline: line)
-                r.strokeColor = .blue
-                r.lineWidth = 3
-                return r
             }
+
+            // Fallback for unknown overlay type
             return MKOverlayRenderer()
         }
 
@@ -444,6 +478,22 @@ struct MapRepresentable: UIViewRepresentable {
         
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
             guard !(annotation is MKUserLocation) else { return nil }
+
+            // Handle measurement pins - YELLOW
+            if let subtitle = annotation.subtitle as? String, subtitle == "measurement_pin" {
+                let id = "measurementPin"
+                var view = mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView
+                if view == nil {
+                    view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: id)
+                    view?.canShowCallout = true
+                    view?.displayPriority = .required
+                } else {
+                    view?.annotation = annotation
+                }
+                view?.markerTintColor = .systemYellow
+                view?.glyphImage = UIImage(systemName: "ruler")
+                return view
+            }
 
             // Handle local dropped pins - RED for personal, BLUE for shared
             if let subtitle = annotation.subtitle as? String, subtitle.starts(with: "dropped_pin_") {

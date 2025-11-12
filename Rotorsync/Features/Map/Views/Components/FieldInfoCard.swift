@@ -40,11 +40,11 @@ struct FieldInfoCard: View {
             }
             
             HStack(spacing: 16) {
-                compactInfo(label: "Req. Acres", value: String(format: "%.1f ac", field.acres))
+                compactInfo(label: "Req. Acres", value: String(format: "%.2f ac", field.acres))
 
                 // Show nominal acres if there's a value greater than 0
                 if let nominalAcres = field.nominalAcres, nominalAcres > 0 {
-                    compactInfo(label: "Nominal Acres", value: String(format: "%.1f ac", nominalAcres))
+                    compactInfo(label: "Nominal Acres", value: String(format: "%.2f ac", nominalAcres))
                 }
 
                 if let prodDupli = field.prodDupli, !prodDupli.isEmpty {

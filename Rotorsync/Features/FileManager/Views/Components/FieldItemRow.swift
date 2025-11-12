@@ -20,7 +20,7 @@ struct FieldItemRow: View {
                 .buttonStyle(PlainButtonStyle())
                 
                 HStack {
-                    Text(String(format: "%.1f ac", field.acres))
+                    Text(String(format: "%.2f ac", field.acres))
                         .font(.caption)
                         .foregroundColor(.secondary)
                     

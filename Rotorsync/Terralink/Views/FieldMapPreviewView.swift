@@ -32,7 +32,7 @@ struct FieldMapPreviewView: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
 
-                        Label(String(format: "%.1f acres", fieldMap.area), systemImage: "grid")
+                        Label(String(format: "%.2f acres", fieldMap.area), systemImage: "grid")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
 

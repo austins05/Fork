@@ -17,10 +17,10 @@ struct FieldDetailsSheet: View {
                         formatFieldName(field.name)
                             .font(.body)
                     }
-                    detailRow(title: "Req. Acres", value: String(format: "%.1f ac", field.acres))
+                    detailRow(title: "Req. Acres", value: String(format: "%.2f ac", field.acres))
                     
                     if let nominalAcres = field.nominalAcres, nominalAcres > 0 {
-                        detailRow(title: "Nominal Acres", value: String(format: "%.1f ac", nominalAcres))
+                        detailRow(title: "Nominal Acres", value: String(format: "%.2f ac", nominalAcres))
                     }
                     
                     if let crop = field.crop, !crop.isEmpty {

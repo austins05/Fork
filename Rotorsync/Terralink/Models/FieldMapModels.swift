@@ -104,7 +104,7 @@ class FieldMapAnnotation: NSObject, MKAnnotation {
     }
 
     var subtitle: String? {
-        "\(fieldMap.customer) • \(String(format: "%.1f acres", fieldMap.area))"
+        "\(fieldMap.customer) • \(String(format: "%.2f acres", fieldMap.area))"
     }
 
     init(fieldMap: FieldMap, coordinate: CLLocationCoordinate2D) {

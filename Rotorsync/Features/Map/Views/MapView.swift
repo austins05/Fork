@@ -48,7 +48,6 @@ struct MapView: View {
     @State private var isLoadingMPZ = false
     @State private var importError: String?
     @State private var selectedField: FieldData?
-    @State private var showFieldDetails = false
 
     @State private var showFileManager = false
     @State private var refreshTrigger = false
@@ -64,6 +63,63 @@ struct MapView: View {
     @State private var userTrackingMode: MKUserTrackingMode = .none
     @State private var shouldForceUpdate = false  // Add this with other @State variables
 
+    // Measurement tool
+    @State private var isMeasuring = false
+    @State private var measurementPins: [(coordinate: CLLocationCoordinate2D, name: String)] = []
+    @State private var totalMeasurementDistance: Double = 0.0
+    @State private var segmentDistances: [Double] = [] // Distance from each pin to the next
+
+
+
+    // MARK: - Measurement Functions
+    private func calculateDistance(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double {
+        let fromLocation = CLLocation(latitude: from.latitude, longitude: from.longitude)
+        let toLocation = CLLocation(latitude: to.latitude, longitude: to.longitude)
+        return fromLocation.distance(from: toLocation) // meters
+    }
+
+    private func formatDistance(_ meters: Double) -> String {
+        let feet = meters * 3.28084
+        if feet < 5280 {
+            return String(format: "%.0f ft", feet)
+        } else {
+            let miles = feet / 5280
+            return String(format: "%.2f mi", miles)
+        }
+    }
+
+    private func addMeasurementPin(coordinate: CLLocationCoordinate2D) {
+        let pinNumber = measurementPins.count + 1
+        let name = "M\(pinNumber)"
+        measurementPins.append((coordinate: coordinate, name: name))
+
+        // Calculate distance from previous pin
+        if measurementPins.count > 1 {
+            let prevPin = measurementPins[measurementPins.count - 2]
+            let distance = calculateDistance(from: prevPin.coordinate, to: coordinate)
+            segmentDistances.append(distance)
+            totalMeasurementDistance += distance
+        }
+    }
+
+    private func clearMeasurements() {
+        measurementPins.removeAll()
+        segmentDistances.removeAll()
+        totalMeasurementDistance = 0.0
+    }
+
+    private func undoLastPin() {
+        guard !measurementPins.isEmpty else { return }
+
+        // Remove the last pin
+        measurementPins.removeLast()
+
+        // If there was a segment distance for this pin, remove it and recalculate total
+        if !segmentDistances.isEmpty {
+            segmentDistances.removeLast()
+            totalMeasurementDistance = segmentDistances.reduce(0, +)
+        }
+    }
 
     private let refreshTimer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
 
@@ -124,13 +180,18 @@ struct MapView: View {
                 userTrackingMode: $userTrackingMode,
                 mapCenter: $mapCenter,
                 shouldForceUpdate: $shouldForceUpdate,
+                isMeasuring: $isMeasuring,
+                measurementPins: $measurementPins,
                 devices: viewModel.devices,
                 onPinTapped: { pin in selectedPinId = pin.id },
                 onGroupPinTapped: { pin in selectedGroupPin = pin },
                 onDeviceTapped: { selectedDevice = $0 },
-                onFieldTapped: { selectedField = $0; showFieldDetails = true },
+                onFieldTapped: { selectedField = $0 },
                 onLongPressPinDropped: { coord, name in
                     Task { await handlePinDrop(coordinate: coord, name: name) }
+                },
+                onMeasurementTap: { coord in
+                    addMeasurementPin(coordinate: coord)
                 }
             )
             .ignoresSafeArea()
@@ -228,6 +289,93 @@ struct MapView: View {
                 .animation(.easeInOut(duration: 0.3), value: hoveredField?.id)
             }
 
+
+
+            // Measurement tool display - top right corner
+            if isMeasuring {
+                HStack(alignment: .top) {
+                    Spacer()
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("MEASURE MODE")
+                            .font(.caption.bold())
+                            .foregroundColor(.blue)
+
+                        Text("Tap map to drop pins")
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.7))
+
+                        if !measurementPins.isEmpty {
+                            Divider()
+                                .opacity(0.2)
+
+                            // Scrollable segment distances
+                            ScrollView {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    ForEach(0..<segmentDistances.count, id: \.self) { index in
+                                        HStack(spacing: 4) {
+                                            Text("M\(index + 1) → M\(index + 2):")
+                                                .font(.caption)
+                                                .foregroundColor(.white.opacity(0.8))
+                                            Text(formatDistance(segmentDistances[index]))
+                                                .font(.caption.weight(.semibold))
+                                                .foregroundColor(.yellow)
+                                        }
+                                    }
+                                }
+                            }
+                            .frame(maxHeight: 200)
+
+                            if totalMeasurementDistance > 0 {
+                                Divider()
+                                    .opacity(0.2)
+                                HStack(spacing: 4) {
+                                    Text("Total:")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundColor(.white)
+                                    Text(formatDistance(totalMeasurementDistance))
+                                        .font(.subheadline.weight(.bold))
+                                        .foregroundColor(.green)
+                                }
+                            }
+
+                            HStack(spacing: 8) {
+                                Button {
+                                    undoLastPin()
+                                } label: {
+                                    Text("Undo")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.orange)
+                                        .cornerRadius(8)
+                                }
+
+                                Button {
+                                    clearMeasurements()
+                                } label: {
+                                    Text("Clear")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.red)
+                                        .cornerRadius(8)
+                                }
+                            }
+                            .padding(.top, 4)
+                        }
+                    }
+                    .frame(maxWidth: 140)
+                    .padding(8)
+                    .background(Color.black.opacity(0.75))
+                    .cornerRadius(12)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.trailing, 110)
+                .padding(.top, 28)
+                .ignoresSafeArea(.all, edges: .top)
+            }
             bottomButtonsView()
         }
 
@@ -275,10 +423,8 @@ struct MapView: View {
             .presentationDetents([.fraction(0.28)])
         }
 
-        .sheet(isPresented: $showFieldDetails) {
-            if let f = selectedField {
-                FieldDetailsSheet(field: f) { selectedField = nil; showFieldDetails = false }
-            }
+        .sheet(item: $selectedField) { field in
+            FieldDetailsSheet(field: field) { selectedField = nil }
         }
 
         .fileImporter(isPresented: $showImport,
@@ -317,7 +463,7 @@ struct MapView: View {
                             .foregroundColor(.orange.opacity(0.7))
                     }
                     
-                    Text(String(format: "%.1f mi", totalDistance))
+                    Text(String(format: "%.2f mi", totalDistance))
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.white)
                 }
@@ -464,6 +610,23 @@ struct MapView: View {
                     .shadow(radius: 5)
             }
             
+
+            // Measurement tool button
+            Button {
+                isMeasuring.toggle()
+                if !isMeasuring {
+                    clearMeasurements()
+                }
+            } label: {
+                Image(systemName: isMeasuring ? "ruler.fill" : "ruler")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(isMeasuring ? Color.blue.opacity(0.8) : Color.black.opacity(0.6))
+                    .clipShape(Circle())
+                    .shadow(radius: 5)
+            }
+
             Button { showGroupManagement = true } label: {
                 Image(systemName: "person.3.fill")
                     .font(.system(size: 22, weight: .semibold))
@@ -569,7 +732,7 @@ struct MapView: View {
                     Task { await saveFieldsToCoreData(fields) }
                     let acres = fields.reduce(0.0) { $0 + $1.acres }
                     showAlert(title: "Import Complete",
-                              message: "Loaded \(fields.count) fields, \(String(format: "%.1f", acres)) total acres")
+                              message: "Loaded \(fields.count) fields, \(String(format: "%.2f", acres)) total acres")
                     isLoadingMPZ = false
                 }
             } catch {
