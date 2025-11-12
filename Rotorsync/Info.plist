@@ -17,6 +17,11 @@
 		<string>bluetooth-peripheral</string>
 		<string>processing</string>
 	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.rotorsync.refresh</string>
+		<string>com.rotorsync.processing</string>
+	</array>
 	<key>keychain-access-groups</key>
 	<string>com.rotorsync</string>
 </dict>

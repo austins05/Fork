@@ -27,13 +27,18 @@ struct OverlaySettingsView: View {
     @Binding var temperatureGraphPosition: TemperatureGraphPosition
     @Binding var temperatureGraphScale: CGFloat
     @Binding var mapStyle: AppMapStyle
+    @Binding var showMeasureButton: Bool
+    @Binding var showGroupsButton: Bool
+    @Binding var showFilesButton: Bool
+    @Binding var showMPZImportButton: Bool
 
     var body: some View {
-        VStack(spacing: 12) {
-            Text("Settings")
-                .font(.title2)
-                .fontWeight(.bold)
-                .padding(.bottom, 5)
+        ScrollView {
+            VStack(spacing: 12) {
+                Text("Settings")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .padding(.bottom, 5)
 
             // Map Style Section
             VStack(alignment: .leading, spacing: 6) {
@@ -60,6 +65,63 @@ struct OverlaySettingsView: View {
                 }
             }
             .padding(.horizontal, 20)
+
+            Divider()
+                .padding(.horizontal, 20)
+
+            // Sidebar Buttons Section
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Sidebar Buttons")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 20)
+
+                VStack(spacing: 4) {
+                    HStack {
+                        Text("Show Measure Tool")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Toggle("", isOn: $showMeasureButton)
+                            .labelsHidden()
+                            .tint(.blue)
+                    }
+                    .padding(.horizontal, 20)
+
+                    HStack {
+                        Text("Show Groups")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Toggle("", isOn: $showGroupsButton)
+                            .labelsHidden()
+                            .tint(.blue)
+                    }
+                    .padding(.horizontal, 20)
+
+                    HStack {
+                        Text("Show Files Manager")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Toggle("", isOn: $showFilesButton)
+                            .labelsHidden()
+                            .tint(.blue)
+                    }
+                    .padding(.horizontal, 20)
+
+                    HStack {
+                        Text("Show MPZ Import")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Toggle("", isOn: $showMPZImportButton)
+                            .labelsHidden()
+                            .tint(.blue)
+                    }
+                    .padding(.horizontal, 20)
+                }
+            }
 
             Divider()
                 .padding(.horizontal, 20)
@@ -148,10 +210,9 @@ struct OverlaySettingsView: View {
                 }
                 .padding(.horizontal, 20)
             }
-
-            Spacer()
+            }
+            .padding(.top, 8)
+            .padding(.bottom, 8)
         }
-        .padding(.top, 8)
-        .padding(.bottom, 8)
     }
 }

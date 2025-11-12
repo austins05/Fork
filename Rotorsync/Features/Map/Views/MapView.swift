@@ -22,6 +22,12 @@ struct MapView: View {
     @State private var temperatureGraphPosition: TemperatureGraphPosition = .topLeft
     @State private var temperatureGraphScale: CGFloat = 1.0
 
+    // Button visibility settings
+    @AppStorage("showMeasureButton") private var showMeasureButton: Bool = true
+    @AppStorage("showGroupsButton") private var showGroupsButton: Bool = true
+    @AppStorage("showFilesButton") private var showFilesButton: Bool = true
+    @AppStorage("showMPZImportButton") private var showMPZImportButton: Bool = true
+
     @State private var droppedPins: [DroppedPinViewModel] = []
     @State private var groupPins: [APIPin] = []
     @State private var selectedPinId: UUID?
@@ -549,18 +555,25 @@ struct MapView: View {
                     showTemperatureGraph: $showTemperatureGraph,
                     temperatureGraphPosition: $temperatureGraphPosition,
                     temperatureGraphScale: $temperatureGraphScale,
-                    mapStyle: $mapStyle
+                    mapStyle: $mapStyle,
+                    showMeasureButton: $showMeasureButton,
+                    showGroupsButton: $showGroupsButton,
+                    showFilesButton: $showFilesButton,
+                    showMPZImportButton: $showMPZImportButton
                 )
-                .presentationDetents([.fraction(0.55)])
+                .presentationDetents([.fraction(0.70)])
             }
-            Button { showImport = true } label: {
-                Image(systemName: "arrow.down.doc.fill")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding()
-                    .background(Color.black.opacity(0.6))
-                    .clipShape(Circle())
-                    .shadow(radius: 5)
+
+            if showMPZImportButton {
+                Button { showImport = true } label: {
+                    Image(systemName: "arrow.down.doc.fill")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.black.opacity(0.6))
+                        .clipShape(Circle())
+                        .shadow(radius: 5)
+                }
             }
 
             if !importedFields.isEmpty {
@@ -599,42 +612,47 @@ struct MapView: View {
                     .clipShape(Circle())
                     .shadow(radius: 5)
             }
-            
-            Button { showFileManager = true } label: {
-                Image(systemName: "folder.fill")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding()
-                    .background(Color.black.opacity(0.6))
-                    .clipShape(Circle())
-                    .shadow(radius: 5)
+
+            if showFilesButton {
+                Button { showFileManager = true } label: {
+                    Image(systemName: "folder.fill")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.black.opacity(0.6))
+                        .clipShape(Circle())
+                        .shadow(radius: 5)
+                }
             }
-            
 
             // Measurement tool button
-            Button {
-                isMeasuring.toggle()
-                if !isMeasuring {
-                    clearMeasurements()
+            if showMeasureButton {
+                Button {
+                    isMeasuring.toggle()
+                    if !isMeasuring {
+                        clearMeasurements()
+                    }
+                } label: {
+                    Image(systemName: isMeasuring ? "ruler.fill" : "ruler")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(isMeasuring ? Color.blue.opacity(0.8) : Color.black.opacity(0.6))
+                        .clipShape(Circle())
+                        .shadow(radius: 5)
                 }
-            } label: {
-                Image(systemName: isMeasuring ? "ruler.fill" : "ruler")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding()
-                    .background(isMeasuring ? Color.blue.opacity(0.8) : Color.black.opacity(0.6))
-                    .clipShape(Circle())
-                    .shadow(radius: 5)
             }
 
-            Button { showGroupManagement = true } label: {
-                Image(systemName: "person.3.fill")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding()
-                    .background(Color.purple.opacity(0.8))
-                    .clipShape(Circle())
-                    .shadow(radius: 5)
+            if showGroupsButton {
+                Button { showGroupManagement = true } label: {
+                    Image(systemName: "person.3.fill")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.purple.opacity(0.8))
+                        .clipShape(Circle())
+                        .shadow(radius: 5)
+                }
             }
         }
         .padding(.bottom, 40)
