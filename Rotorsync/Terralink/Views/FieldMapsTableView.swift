@@ -723,7 +723,7 @@ struct FieldMapsTableView: View {
 
 
                 // Fetch geometry from backend
-                let url = URL(string: "http://192.168.68.226:3000/api/field-maps/\(jobId)/geometry?type=requested")!
+                let url = URL(string: "https://jobs.rotorsync.com/api/field-maps/\(jobId)/geometry?type=requested")!
                 let (data, response) = try await URLSession.shared.data(from: url)
 
                 // Check HTTP status
@@ -834,7 +834,7 @@ struct FieldMapsTableView: View {
 
                 // Fetch worked geometry (spray lines) - fetch ALL features
                 var workedPolygons: [[CLLocationCoordinate2D]]? = nil
-                let workedURLString = "http://192.168.68.226:3000/api/field-maps/\(job.id)/geometry?type=worked-detailed"
+                let workedURLString = "https://jobs.rotorsync.com/api/field-maps/\(job.id)/geometry?type=worked-detailed"
                 print("🔍 REQUESTING URL: \(workedURLString)")
                 if let workedURL = URL(string: workedURLString) {
                     do {
@@ -1169,7 +1169,7 @@ class FieldMapsTableViewModel: ObservableObject {
 
         do {
             // Load test customer (ID 5429)
-            guard let url = URL(string: "http://192.168.68.226:3000/api/field-maps/customer/5429") else {
+            guard let url = URL(string: "https://jobs.rotorsync.com/api/field-maps/customer/5429") else {
                 throw URLError(.badURL)
             }
 
@@ -1241,7 +1241,7 @@ class FieldMapsTableViewModel: ObservableObject {
                     // Fetch boundary geometry
                     group.addTask {
                         print("📡 Fetching boundary for \(job.id)...")
-                        guard let url = URL(string: "http://192.168.68.226:3000/api/field-maps/\(job.id)/geometry?type=requested") else {
+                        guard let url = URL(string: "https://jobs.rotorsync.com/api/field-maps/\(job.id)/geometry?type=requested") else {
                             throw URLError(.badURL)
                         }
                         let (data, response) = try await self.urlSession.data(from: url)
@@ -1256,7 +1256,7 @@ class FieldMapsTableViewModel: ObservableObject {
                     // Fetch spray lines
                     group.addTask {
                         print("📡 Fetching spray lines for \(job.id)...")
-                        guard let url = URL(string: "http://192.168.68.226:3000/api/field-maps/\(job.id)/geometry?type=worked-detailed") else {
+                        guard let url = URL(string: "https://jobs.rotorsync.com/api/field-maps/\(job.id)/geometry?type=worked-detailed") else {
                             throw URLError(.badURL)
                         }
                         let (data, response) = try await self.urlSession.data(from: url)
@@ -1361,7 +1361,7 @@ class FieldMapsTableViewModel: ObservableObject {
             try await withThrowingTaskGroup(of: (String, Data).self) { group in
                 group.addTask {
                     print("📡 Fetching boundary for \(job.id)...")
-                    guard let url = URL(string: "http://192.168.68.226:3000/api/field-maps/\(job.id)/geometry?type=requested") else {
+                    guard let url = URL(string: "https://jobs.rotorsync.com/api/field-maps/\(job.id)/geometry?type=requested") else {
                         throw URLError(.badURL)
                     }
                     let (data, response) = try await self.urlSession.data(from: url)
@@ -1375,7 +1375,7 @@ class FieldMapsTableViewModel: ObservableObject {
 
                 group.addTask {
                     print("📡 Fetching spray for \(job.id)...")
-                    guard let url = URL(string: "http://192.168.68.226:3000/api/field-maps/\(job.id)/geometry?type=worked-detailed") else {
+                    guard let url = URL(string: "https://jobs.rotorsync.com/api/field-maps/\(job.id)/geometry?type=worked-detailed") else {
                         throw URLError(.badURL)
                     }
                     let (data, response) = try await self.urlSession.data(from: url)

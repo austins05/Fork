@@ -483,7 +483,7 @@ class NotificationConfigManager: ObservableObject {
     @Published var nogoZoneMessage = ""
     @Published var zeroAreaMessage = ""
 
-    private let baseURL = "http://192.168.68.226:3000/api/notifications"
+    private let baseURL = "https://jobs.rotorsync.com/api/notifications"
 
     func loadConfig() async {
         do {

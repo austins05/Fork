@@ -176,7 +176,7 @@ struct FieldMapPreviewSheet: View {
                 sprayLines = cached.sprayLines
             } else {
                 // Fetch from network
-                guard let url = URL(string: "http://192.168.68.226:3000/api/field-maps/\(job.id)/geometry?type=requested") else {
+                guard let url = URL(string: "https://jobs.rotorsync.com/api/field-maps/\(job.id)/geometry?type=requested") else {
                     isLoading = false
                     return
                 }
@@ -186,7 +186,7 @@ struct FieldMapPreviewSheet: View {
                 boundaryCoordinates = response.data.features.compactMap { $0.geometry.mapCoordinates }
 
                 // Fetch spray lines
-                if let sprayURL = URL(string: "http://192.168.68.226:3000/api/field-maps/\(job.id)/geometry?type=worked-detailed") {
+                if let sprayURL = URL(string: "https://jobs.rotorsync.com/api/field-maps/\(job.id)/geometry?type=worked-detailed") {
                     let (sprayData, _) = try await URLSession.shared.data(from: sprayURL)
                     if let sprayResponse = try? JSONDecoder().decode(GeometryAPIResponse.self, from: sprayData) {
                         sprayLines = sprayResponse.data.features.compactMap { $0.geometry.mapCoordinates }

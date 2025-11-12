@@ -15,7 +15,7 @@ class TabulaAPIService: ObservableObject {
     
     // MARK: - Configuration
 
-    private let baseURL = "http://192.168.68.226:3000/api"
+    private let baseURL = "https://jobs.rotorsync.com/api"
 
     private let session: URLSession
     private var cancellables = Set<AnyCancellable>()

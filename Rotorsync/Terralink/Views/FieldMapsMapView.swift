@@ -238,7 +238,7 @@ class TerralinkMapViewModel: ObservableObject {
 
     private func fetchGeometry(for fieldMap: FieldMap, completion: @escaping (FieldGeometry?) -> Void) {
         // Use backend API instead of direct Tracmap URLs
-        guard let url = URL(string: "http://192.168.68.226:3000/api/field-maps/\(fieldMap.id)/geometry?type=requested") else {
+        guard let url = URL(string: "https://jobs.rotorsync.com/api/field-maps/\(fieldMap.id)/geometry?type=requested") else {
             completion(nil)
             return
         }
@@ -280,7 +280,7 @@ class TerralinkMapViewModel: ObservableObject {
     }
 
     private func fetchWorkedGeometry(fieldId: Int, completion: @escaping ([CLLocationCoordinate2D]?) -> Void) {
-        guard let url = URL(string: "http://192.168.68.226:3000/api/field-maps/\(fieldId)/geometry?type=worked") else {
+        guard let url = URL(string: "https://jobs.rotorsync.com/api/field-maps/\(fieldId)/geometry?type=worked") else {
             print("❌ Invalid URL for worked geometry: \(fieldId)")
             completion(nil)
             return
