@@ -254,6 +254,59 @@ struct MapRepresentable: UIViewRepresentable {
             }
         }
 
+        // MARK: - Flight Mode Projection Helpers
+
+        /// Calculate destination coordinate from start, bearing, and distance
+        private func calculateDestination(from start: CLLocationCoordinate2D, bearing: Double, distance: Double) -> CLLocationCoordinate2D {
+            let R = 6371000.0 // Earth radius in meters
+            let lat1 = start.latitude * .pi / 180.0
+            let lon1 = start.longitude * .pi / 180.0
+            let brng = bearing * .pi / 180.0
+
+            let lat2 = asin(sin(lat1) * cos(distance / R) + cos(lat1) * sin(distance / R) * cos(brng))
+            let lon2 = lon1 + atan2(sin(brng) * sin(distance / R) * cos(lat1),
+                                    cos(distance / R) - sin(lat1) * sin(lat2))
+
+            return CLLocationCoordinate2D(
+                latitude: lat2 * 180.0 / .pi,
+                longitude: lon2 * 180.0 / .pi
+            )
+        }
+
+        /// Calculate bearing from one coordinate to another
+        private func calculateBearing(from start: CLLocationCoordinate2D, to end: CLLocationCoordinate2D) -> Double {
+            let lat1 = start.latitude * .pi / 180.0
+            let lon1 = start.longitude * .pi / 180.0
+            let lat2 = end.latitude * .pi / 180.0
+            let lon2 = end.longitude * .pi / 180.0
+
+            let dLon = lon2 - lon1
+            let y = sin(dLon) * cos(lat2)
+            let x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
+            let bearing = atan2(y, x) * 180.0 / .pi
+
+            return (bearing + 360).truncatingRemainder(dividingBy: 360)
+        }
+
+        /// Create perpendicular tick mark coordinates at a point
+        private func createPerpendicularTick(at point: CLLocationCoordinate2D, bearing: Double) -> [CLLocationCoordinate2D] {
+            let perpBearing = (bearing + 90).truncatingRemainder(dividingBy: 360)
+            let leftPoint = calculateDestination(from: point, bearing: perpBearing, distance: 7)
+            let rightPoint = calculateDestination(from: point, bearing: perpBearing + 180, distance: 7)
+            return [leftPoint, rightPoint]
+        }
+
+        /// Create arrow polylines at endpoint
+        private func createArrowLines(at endpoint: CLLocationCoordinate2D, bearing: Double) -> [[CLLocationCoordinate2D]] {
+            let leftArrowPoint = calculateDestination(from: endpoint, bearing: bearing - 150, distance: 20)
+            let rightArrowPoint = calculateDestination(from: endpoint, bearing: bearing + 150, distance: 20)
+
+            return [
+                [leftArrowPoint, endpoint],
+                [endpoint, rightArrowPoint]
+            ]
+        }
+
         @objc func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
             guard gesture.state == .began else { return }
             let mv = gesture.view as! MKMapView
@@ -594,28 +647,43 @@ struct MapRepresentable: UIViewRepresentable {
             }
 
             // Add flight mode projection ray
-            if !parent.projectionRayLine.isEmpty {
+            if !parent.projectionRayLine.isEmpty, parent.projectionRayLine.count >= 2 {
                 let line = MKPolyline(coordinates: parent.projectionRayLine, count: parent.projectionRayLine.count)
                 line.title = "projection_ray_line"
                 mapView.addOverlay(line)
                 print("🚁 [OVERLAY] Added flight mode projection ray with \(parent.projectionRayLine.count) points")
 
-            // Add projection time markers as circles
-            if let mark5 = parent.projection5MinMark {
-                let circle = MKCircle(center: mark5, radius: 50)
-                circle.title = "projection_5min"
-                mapView.addOverlay(circle)
-            }
-            if let mark10 = parent.projection10MinMark {
-                let circle = MKCircle(center: mark10, radius: 50)
-                circle.title = "projection_10min"
-                mapView.addOverlay(circle)
-            }
-            if let mark15 = parent.projection15MinMark {
-                let circle = MKCircle(center: mark15, radius: 50)
-                circle.title = "projection_15min"
-                mapView.addOverlay(circle)
-            }
+                // Calculate bearing from the projection line (start to end)
+                let start = parent.projectionRayLine[0]
+                let end = parent.projectionRayLine[parent.projectionRayLine.count - 1]
+                let bearing = calculateBearing(from: start, to: end)
+
+                // Add perpendicular tick marks at 5 and 10 minute marks
+                if let mark5 = parent.projection5MinMark {
+                    let tickCoords = createPerpendicularTick(at: mark5, bearing: bearing)
+                    let tickLine = MKPolyline(coordinates: tickCoords, count: tickCoords.count)
+                    tickLine.title = "projection_tick_5min"
+                    mapView.addOverlay(tickLine)
+                    print("🚁 [OVERLAY] Added 5-min tick mark")
+                }
+                if let mark10 = parent.projection10MinMark {
+                    let tickCoords = createPerpendicularTick(at: mark10, bearing: bearing)
+                    let tickLine = MKPolyline(coordinates: tickCoords, count: tickCoords.count)
+                    tickLine.title = "projection_tick_10min"
+                    mapView.addOverlay(tickLine)
+                    print("🚁 [OVERLAY] Added 10-min tick mark")
+                }
+
+                // Add arrow at 15 minute mark
+                if let mark15 = parent.projection15MinMark {
+                    let arrowLines = createArrowLines(at: mark15, bearing: bearing)
+                    for (index, arrowCoords) in arrowLines.enumerated() {
+                        let arrowLine = MKPolyline(coordinates: arrowCoords, count: arrowCoords.count)
+                        arrowLine.title = "projection_arrow_15min_\(index)"
+                        mapView.addOverlay(arrowLine)
+                    }
+                    print("🚁 [OVERLAY] Added 15-min arrow")
+                }
             }
 
             // Add measurement lines between pins
@@ -769,6 +837,24 @@ struct MapRepresentable: UIViewRepresentable {
                     return r
                 }
 
+                // Check if it's a projection tick mark (5 or 10 min)
+                if let title = polyline.title, title.starts(with: "projection_tick_") {
+                    r.strokeColor = UIColor.systemCyan
+                    r.lineWidth = 2 // 2px width as specified
+                    r.lineCap = .round
+                    r.alpha = 0.9
+                    return r
+                }
+
+                // Check if it's a projection arrow (15 min)
+                if let title = polyline.title, title.starts(with: "projection_arrow_") {
+                    r.strokeColor = UIColor.systemCyan
+                    r.lineWidth = 2 // 2px width as specified
+                    r.lineCap = .round
+                    r.alpha = 0.9
+                    return r
+                }
+
                 // Check if it's a spray line
                 if let subtitle = polyline.subtitle, subtitle.starts(with: "spray_line_") {
                     print("✈️ Rendering SPRAY LINE (polyline)")
@@ -882,15 +968,6 @@ struct MapRepresentable: UIViewRepresentable {
                 return r
             }
 
-
-            // Render projection time marker circles
-            if let circle = overlay as? MKCircle, let title = circle.title, title.starts(with: "projection_") {
-                let renderer = MKCircleRenderer(circle: circle)
-                renderer.strokeColor = .systemCyan
-                renderer.lineWidth = 3
-                renderer.fillColor = UIColor.systemCyan.withAlphaComponent(0.3)
-                return renderer
-            }
             // Fallback for unknown overlay type
             return MKOverlayRenderer()
         }
