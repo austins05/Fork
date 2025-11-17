@@ -470,28 +470,32 @@ struct MapRepresentable: UIViewRepresentable {
                     mapView.addAnnotation(a)
                 }
 
-                // Add flight mode projection time markers
-                if let mark5 = parent.projection5MinMark {
-                    let a = MKPointAnnotation()
-                    a.coordinate = mark5
-                    a.title = "5 min"
-                    a.subtitle = "projection_5min"
-                    mapView.addAnnotation(a)
-                }
-                if let mark10 = parent.projection10MinMark {
-                    let a = MKPointAnnotation()
-                    a.coordinate = mark10
-                    a.title = "10 min"
-                    a.subtitle = "projection_10min"
-                    mapView.addAnnotation(a)
-                }
-                if let mark15 = parent.projection15MinMark {
-                    let a = MKPointAnnotation()
-                    a.coordinate = mark15
-                    a.title = "15 min"
-                    a.subtitle = "projection_15min"
-                    mapView.addAnnotation(a)
-                }
+
+                // REMOVED: Projection markers now use MKCircle overlays
+                /*
+                //                 // Add flight mode projection time markers
+                                if let mark5 = parent.projection5MinMark {
+                                    let a = MKPointAnnotation()
+                                    a.coordinate = mark5
+                                    a.title = "5 min"
+                                    a.subtitle = "projection_5min"
+                                    mapView.addAnnotation(a)
+                                }
+                                if let mark10 = parent.projection10MinMark {
+                                    let a = MKPointAnnotation()
+                                    a.coordinate = mark10
+                                    a.title = "10 min"
+                                    a.subtitle = "projection_10min"
+                                    mapView.addAnnotation(a)
+                                }
+                                if let mark15 = parent.projection15MinMark {
+                                    let a = MKPointAnnotation()
+                                    a.coordinate = mark15
+                                    a.title = "15 min"
+                                    a.subtitle = "projection_15min"
+                                    mapView.addAnnotation(a)
+                                }
+                */
             }
 
             // Handle overlays separately
@@ -505,7 +509,12 @@ struct MapRepresentable: UIViewRepresentable {
             let navRouteHash = (parent.navigationRoute != nil ? 50 : 0)
             let measurementHash = parent.measurementPins.count * 10
             let flyLineHash = parent.flyToLine.count * 5
-            let projectionHash = parent.projectionRayLine.count * 3
+            var projectionHash = 0
+            if !parent.projectionRayLine.isEmpty {
+                for coord in parent.projectionRayLine {
+                    projectionHash += Int(coord.latitude * 1000000) + Int(coord.longitude * 1000000)
+                }
+            }
             let remainingRouteHash = (parent.remainingRoutePolyline?.pointCount ?? 0)
             let forceRefreshHash = (parent.forceOverlayRefresh ? 1 : 0)
             let overlayHash = fieldsHash + routesHash + navRouteHash + measurementHash + flyLineHash + projectionHash + remainingRouteHash + forceRefreshHash
@@ -590,6 +599,23 @@ struct MapRepresentable: UIViewRepresentable {
                 line.title = "projection_ray_line"
                 mapView.addOverlay(line)
                 print("🚁 [OVERLAY] Added flight mode projection ray with \(parent.projectionRayLine.count) points")
+
+            // Add projection time markers as circles
+            if let mark5 = parent.projection5MinMark {
+                let circle = MKCircle(center: mark5, radius: 50)
+                circle.title = "projection_5min"
+                mapView.addOverlay(circle)
+            }
+            if let mark10 = parent.projection10MinMark {
+                let circle = MKCircle(center: mark10, radius: 50)
+                circle.title = "projection_10min"
+                mapView.addOverlay(circle)
+            }
+            if let mark15 = parent.projection15MinMark {
+                let circle = MKCircle(center: mark15, radius: 50)
+                circle.title = "projection_15min"
+                mapView.addOverlay(circle)
+            }
             }
 
             // Add measurement lines between pins
@@ -856,6 +882,15 @@ struct MapRepresentable: UIViewRepresentable {
                 return r
             }
 
+
+            // Render projection time marker circles
+            if let circle = overlay as? MKCircle, let title = circle.title, title.starts(with: "projection_") {
+                let renderer = MKCircleRenderer(circle: circle)
+                renderer.strokeColor = .systemCyan
+                renderer.lineWidth = 3
+                renderer.fillColor = UIColor.systemCyan.withAlphaComponent(0.3)
+                return renderer
+            }
             // Fallback for unknown overlay type
             return MKOverlayRenderer()
         }

@@ -102,6 +102,7 @@ struct MapView: View {
     @State private var projection5MinMark: CLLocationCoordinate2D?
     @State private var projection10MinMark: CLLocationCoordinate2D?
     @State private var projection15MinMark: CLLocationCoordinate2D?
+    @State private var lastProjectionUpdate = Date()
 
     init() {
         let locationMgr = LocationManager.shared
@@ -1192,6 +1193,9 @@ struct MapView: View {
 
     /// Update flight mode projection ray and time markers based on current heading and speed
     private func updateFlightModeProjection() {
+        // Throttle updates to reduce glitching
+        guard Date().timeIntervalSince(lastProjectionUpdate) > 2.0 else { return }
+        lastProjectionUpdate = Date()
         guard let location = locationManager.userLocation, flightMode else {
             // Clear projection if flight mode is off or no location
             projectionRayLine = []
