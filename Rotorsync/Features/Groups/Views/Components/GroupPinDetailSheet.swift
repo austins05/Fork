@@ -4,7 +4,8 @@ import CoreLocation
 
 struct GroupPinDetailSheet: View {
     let pin: APIPin
-    
+    var onStartNavigation: ((CLLocationCoordinate2D) -> Void)?
+
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
@@ -131,9 +132,19 @@ struct GroupPinDetailSheet: View {
     
     private func driveToPin() {
         let coordinate = CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude)
-        
+
+        // Use in-app navigation if callback is provided
+        if let onStartNavigation = onStartNavigation {
+            print("✅ [GROUP PIN] Using in-app navigation")
+            onStartNavigation(coordinate)
+            dismiss()
+            return
+        }
+
+        // Fallback to external navigation
+        print("⚠️ [GROUP PIN] No callback - using external maps")
         let googleNavURL = URL(string: "comgooglemaps://?daddr=\(coordinate.latitude),\(coordinate.longitude)&directionsmode=driving")!
-        
+
         if UIApplication.shared.canOpenURL(googleNavURL) {
             UIApplication.shared.open(googleNavURL)
         } else {

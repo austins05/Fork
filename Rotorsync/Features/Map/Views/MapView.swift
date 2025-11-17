@@ -27,6 +27,7 @@ struct MapView: View {
     @AppStorage("showGroupsButton") private var showGroupsButton: Bool = true
     @AppStorage("showFilesButton") private var showFilesButton: Bool = true
     @AppStorage("showMPZImportButton") private var showMPZImportButton: Bool = true
+    @AppStorage("flightMode") private var flightMode: Bool = false
 
     @State private var droppedPins: [DroppedPinViewModel] = []
     @State private var groupPins: [APIPin] = []
@@ -75,7 +76,38 @@ struct MapView: View {
     @State private var totalMeasurementDistance: Double = 0.0
     @State private var segmentDistances: [Double] = [] // Distance from each pin to the next
 
+    // Navigation
+    @ObservedObject private var navigationManager: NavigationManager
+    @State private var isNavigating = false
+    @State private var showRouteSelection = false
+    @State private var selectedRouteIndex: Int?
+    @State private var allRoutes: [NavigationRoute] = []
+    @State private var navigationRoute: NavigationRoute?
+    @State private var alternateRoutes: [NavigationRoute] = []
+    @State private var isAddingWaypoint: Bool = false
+    @State private var navigationCameraAltitude: CLLocationDistance = 800
+    @State private var lastSpeedZoomUpdate: Date = Date()
+    @State private var forceOverlayRefresh: Bool = false
 
+    // Fly To mode
+    @State private var isFlyingTo = false
+    @State private var flyToDestination: CLLocationCoordinate2D?
+    @State private var flyToLine: [CLLocationCoordinate2D] = []
+    @State private var currentHeading: Double = 0 // Heading from movement
+    @State private var headingLocationHistory: [CLLocation] = [] // Last few locations for heading calculation
+    @State private var speedHistory: [(speed: Double, timestamp: Date)] = [] // For average speed calculation
+
+    // Flight Mode projection ray
+    @State private var projectionRayLine: [CLLocationCoordinate2D] = []
+    @State private var projection5MinMark: CLLocationCoordinate2D?
+    @State private var projection10MinMark: CLLocationCoordinate2D?
+    @State private var projection15MinMark: CLLocationCoordinate2D?
+
+    init() {
+        let locationMgr = LocationManager.shared
+        let navMgr = NavigationManager(locationManager: locationMgr)
+        _navigationManager = ObservedObject(wrappedValue: navMgr)
+    }
 
     // MARK: - Measurement Functions
     private func calculateDistance(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double {
@@ -188,6 +220,21 @@ struct MapView: View {
                 shouldForceUpdate: $shouldForceUpdate,
                 isMeasuring: $isMeasuring,
                 measurementPins: $measurementPins,
+                navigationRoute: $navigationRoute,
+                allRoutes: $allRoutes,
+                selectedRouteIndex: $selectedRouteIndex,
+                isNavigating: $isNavigating,
+                waypoints: $navigationManager.waypoints,
+                isAddingWaypoint: $isAddingWaypoint,
+                navigationCameraAltitude: $navigationCameraAltitude,
+                flyToLine: $flyToLine,
+                remainingRoutePolyline: $navigationManager.remainingRoutePolyline,
+                forceOverlayRefresh: $forceOverlayRefresh,
+                projectionRayLine: $projectionRayLine,
+                projection5MinMark: $projection5MinMark,
+                projection10MinMark: $projection10MinMark,
+                projection15MinMark: $projection15MinMark,
+                flightMode: $flightMode,
                 devices: viewModel.devices,
                 onPinTapped: { pin in selectedPinId = pin.id },
                 onGroupPinTapped: { pin in selectedGroupPin = pin },
@@ -198,6 +245,16 @@ struct MapView: View {
                 },
                 onMeasurementTap: { coord in
                     addMeasurementPin(coordinate: coord)
+                },
+                onRouteTapped: { routeIndex in
+                    selectedRouteIndex = routeIndex
+                },
+                onWaypointTapped: { index in
+                    showWaypointRemoveAlert(index: index)
+                },
+                onAddWaypoint: { coordinate in
+                    navigationManager.addWaypoint(coordinate)
+                    isAddingWaypoint = false
                 }
             )
             .ignoresSafeArea()
@@ -225,7 +282,47 @@ struct MapView: View {
                    trackedLocations.append(new)
                    path.append(new.coordinate)
                }
-               // Don't auto-center here - let user control it
+
+               // Speed-based zoom during navigation
+               if isNavigating, let location = newLoc, userTrackingMode == .followWithHeading {
+                   adjustZoomForSpeed(speed: location.speed, coordinate: location.coordinate)
+               }
+
+               // Track heading and speed history for both Fly-To and Flight Mode
+               if (isFlyingTo || flightMode), let location = newLoc {
+                   // Track location history for heading calculation (last 30 feet ≈ 2-3 updates)
+                   headingLocationHistory.append(location)
+                   if headingLocationHistory.count > 3 {
+                       headingLocationHistory.removeFirst()
+                   }
+
+                   // Track speed history for average calculation (last 1 minute)
+                   let now = Date()
+                   speedHistory.append((speed: location.speed, timestamp: now))
+                   speedHistory.removeAll { now.timeIntervalSince($0.timestamp) > 60 } // Keep only last 60 seconds
+
+                   // Calculate heading from movement (last 30 feet) or GPS course
+                   if headingLocationHistory.count >= 2 {
+                       let oldest = headingLocationHistory.first!
+                       let newest = location
+                       currentHeading = calculateBearing(from: oldest.coordinate, to: newest.coordinate)
+                       print("🧭 [HEADING] From movement: \(currentHeading)°")
+                   } else if location.course >= 0 {
+                       // Fallback to GPS course when not enough movement data
+                       currentHeading = location.course
+                       print("🧭 [HEADING] From GPS course: \(currentHeading)°")
+                   }
+               }
+
+               // Update fly-to straight line
+               if isFlyingTo, let destination = flyToDestination, let location = newLoc {
+                   flyToLine = [location.coordinate, destination]
+               }
+
+               // Update flight mode projection
+               if flightMode {
+                   updateFlightModeProjection()
+               }
            }
             .onReceive(refreshTimer) { _ in }
             .onReceive(NotificationCenter.default.publisher(for: .coreDataDidChange)) { _ in
@@ -412,13 +509,27 @@ struct MapView: View {
             set: { if !$0 { selectedPinId = nil } }
         )) {
             if let pinId = selectedPinId {
-                PinActionSheet(pinId: pinId, coreDataService: coreDataService)
+                PinActionSheet(
+                    pinId: pinId,
+                    coreDataService: coreDataService,
+                    onStartNavigation: { coordinate in
+                        startNavigation(to: coordinate)
+                    },
+                    onStartFlyTo: { coordinate in
+                        startFlyTo(to: coordinate)
+                    }
+                )
             }
         }
         
         .sheet(item: $selectedGroupPin) { pin in
-            GroupPinDetailSheet(pin: pin)
-                .presentationDetents([.medium])
+            GroupPinDetailSheet(
+                pin: pin,
+                onStartNavigation: { coordinate in
+                    startNavigation(to: coordinate)
+                }
+            )
+            .presentationDetents([.medium])
         }
 
         .sheet(item: $selectedDevice) { dev in
@@ -448,6 +559,125 @@ struct MapView: View {
         
         .sheet(isPresented: $showGroupManagement) {
             GroupManagementView()
+        }
+
+        .onChange(of: flightMode) { oldValue, newValue in
+            // Clear projection when flight mode is turned off
+            if !newValue {
+                projectionRayLine = []
+                projection5MinMark = nil
+                projection10MinMark = nil
+                projection15MinMark = nil
+                print("🚁 [FLIGHT MODE] Projection cleared")
+            }
+        }
+
+        .overlay(alignment: .leading) {
+            // Route selection sidebar
+            if showRouteSelection {
+                RouteSelectionSheet(
+                    navigationManager: navigationManager,
+                    selectedRouteIndex: $selectedRouteIndex,
+                    isAddingWaypoint: $isAddingWaypoint,
+                    onStartNavigation: {
+                        if let index = selectedRouteIndex, index < allRoutes.count {
+                            let route = allRoutes[index]
+                            navigationRoute = route
+                            navigationManager.startNavigation(with: route)
+                            isNavigating = true
+                            showRouteSelection = false
+                            allRoutes = []
+                            selectedRouteIndex = nil
+                            isAddingWaypoint = false
+                            navigationManager.clearWaypoints()
+                        }
+                    },
+                    onCancel: {
+                        showRouteSelection = false
+                        allRoutes = []
+                        selectedRouteIndex = nil
+                        isAddingWaypoint = false
+                        navigationManager.clearWaypoints()
+                    },
+                    onRecalculateRoutes: {
+                        // Recalculate routes with updated highway preference
+                        if let dest = navigationManager.destination {
+                            print("🔄 [MAP VIEW] Recalculating routes with updated settings")
+                            navigationManager.calculateRoutes(to: dest)
+                        }
+                    }
+                )
+            }
+        }
+
+        .overlay(alignment: .leading) {
+            if isNavigating {
+                InAppNavigationView(
+                    navigationManager: navigationManager,
+                    isNavigating: $isNavigating,
+                    onEndNavigation: {
+                        print("🔄 [MAP VIEW] onEndNavigation callback triggered")
+                        stopNavigation()
+                    }
+                )
+            }
+        }
+
+        .overlay(alignment: .top) {
+            if isFlyingTo, let destination = flyToDestination {
+                CompassTapeOverlay(
+                    currentHeading: currentHeading,
+                    destinationBearing: calculateDestinationBearing(),
+                    destination: destination,
+                    currentLocation: locationManager.userLocation,
+                    isFlyingTo: $isFlyingTo,
+                    averageSpeed: calculateAverageSpeed(),
+                    onEndFlyTo: {
+                        print("🔄 [MAP VIEW] onEndFlyTo callback triggered")
+                        stopFlyTo()
+                    }
+                )
+                .ignoresSafeArea(.all, edges: .top)
+            }
+        }
+
+        .onReceive(navigationManager.$status) { status in
+            switch status {
+            case .selectingRoute(let routes):
+                // Show all routes on map for selection
+                print("🗺️ [MAP VIEW] selectingRoute status received with \(routes.count) routes")
+                print("🗺️ [MAP VIEW] Waypoints: \(navigationManager.waypoints.count)")
+
+                allRoutes = routes
+                selectedRouteIndex = 0 // Default to first route
+                showRouteSelection = true
+                isAddingWaypoint = true // Automatically enable waypoint mode
+
+                // Force overlay update when routes change
+                forceOverlayRefresh.toggle()
+
+                print("🗺️ [MAP VIEW] Showing \(routes.count) route options - waypoint mode enabled, overlay refresh triggered")
+            case .navigating:
+                if let route = navigationManager.selectedRoute {
+                    navigationRoute = route
+                }
+                // Auto-enable heading tracking when navigation starts
+                userTrackingMode = .followWithHeading
+                print("🧭 [MAP VIEW] Navigation started - auto-enabled heading tracking")
+            case .idle, .arrived:
+                print("🧭 [MAP VIEW] Navigation ending - clearing all routes")
+                navigationRoute = nil
+                allRoutes = []
+                selectedRouteIndex = nil
+                alternateRoutes = []
+                isNavigating = false
+                navigationManager.clearWaypoints()
+                userTrackingMode = .none
+                forceOverlayRefresh.toggle() // Force overlay to refresh
+                print("🧭 [MAP VIEW] Navigation ended and cleaned up")
+            default:
+                break
+            }
         }
     }
 
@@ -596,19 +826,6 @@ struct MapView: View {
                     .foregroundColor(.white)
                     .padding()
                     .background(userTrackingMode == .followWithHeading ? Color.blue.opacity(0.8) : Color.black.opacity(0.6))
-                    .clipShape(Circle())
-                    .shadow(radius: 5)
-            }
-              
-            // Auto-center button (centers on user with nice overview)
-            Button {
-                centerToOverview()
-            } label: {
-                Image(systemName: "location.viewfinder")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding()
-                    .background(Color.black.opacity(0.6))
                     .clipShape(Circle())
                     .shadow(radius: 5)
             }
@@ -817,6 +1034,266 @@ struct MapView: View {
             await MainActor.run {
                 showAlert(title: "Save Failed", message: error.localizedDescription)
             }
+        }
+    }
+
+    // MARK: - Navigation Functions
+    private func startNavigation(to coordinate: CLLocationCoordinate2D) {
+        print("🗺️ [MAP VIEW] startNavigation called with coordinate: \(coordinate.latitude), \(coordinate.longitude)")
+        navigationManager.calculateRoutes(to: coordinate)
+        print("🗺️ [MAP VIEW] calculateRoutes called on NavigationManager")
+    }
+
+    private func stopNavigation() {
+        print("🗺️ [MAP VIEW] ========== STOPPING NAVIGATION ==========")
+
+        // Immediately set state to trigger cleanup
+        isNavigating = false
+
+        // Clear navigation manager state FIRST
+        navigationManager.stopNavigation()
+        navigationManager.clearWaypoints()
+
+        // Clear ALL route display state
+        navigationRoute = nil
+        alternateRoutes = []
+        allRoutes = []
+        selectedRouteIndex = nil
+        userTrackingMode = .none
+        navigationCameraAltitude = 800
+
+        // Force overlay refresh IMMEDIATELY
+        forceOverlayRefresh.toggle()
+
+        print("🗺️ [MAP VIEW] First cleanup pass complete")
+
+        // Secondary cleanup after delay to ensure overlays removed
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.navigationRoute = nil
+            self.allRoutes = []
+            self.forceOverlayRefresh.toggle()
+            print("🗺️ [MAP VIEW] Secondary cleanup pass complete - route MUST be gone")
+        }
+    }
+
+    // MARK: - Fly To Functions
+    private func startFlyTo(to coordinate: CLLocationCoordinate2D) {
+        print("✈️ [MAP VIEW] Starting Fly To mode")
+        flyToDestination = coordinate
+        isFlyingTo = true
+
+        // Initial line from current location to destination
+        if let currentLoc = locationManager.userLocation {
+            flyToLine = [currentLoc.coordinate, coordinate]
+
+            // Set initial heading from GPS course if available
+            if currentLoc.course >= 0 {
+                currentHeading = currentLoc.course
+                print("✈️ [MAP VIEW] Initial heading from GPS: \(currentHeading)°")
+            } else {
+                // Use bearing to destination as initial heading if no course
+                currentHeading = calculateBearing(from: currentLoc.coordinate, to: coordinate)
+                print("✈️ [MAP VIEW] Initial heading from bearing to dest: \(currentHeading)°")
+            }
+        }
+
+        print("✈️ [MAP VIEW] Fly To mode active")
+    }
+
+    private func stopFlyTo() {
+        print("✈️ [MAP VIEW] Stopping Fly To mode")
+        isFlyingTo = false
+        flyToDestination = nil
+        flyToLine = []
+        headingLocationHistory = []
+        speedHistory = []
+        currentHeading = 0
+        print("✈️ [MAP VIEW] Fly To mode stopped")
+    }
+
+    private func calculateAverageSpeed() -> Double {
+        guard !speedHistory.isEmpty else { return 0 }
+
+        // Calculate average speed from last minute of data
+        let totalSpeed = speedHistory.reduce(0.0) { $0 + $1.speed }
+        return totalSpeed / Double(speedHistory.count)
+    }
+
+    private func calculateBearing(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double {
+        let lat1 = from.latitude * .pi / 180
+        let lon1 = from.longitude * .pi / 180
+        let lat2 = to.latitude * .pi / 180
+        let lon2 = to.longitude * .pi / 180
+
+        let dLon = lon2 - lon1
+
+        let y = sin(dLon) * cos(lat2)
+        let x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
+        let bearing = atan2(y, x) * 180 / .pi
+
+        return (bearing + 360).truncatingRemainder(dividingBy: 360)
+    }
+
+    private func calculateDestinationBearing() -> Double? {
+        guard let destination = flyToDestination, let location = locationManager.userLocation else {
+            print("🧭 [BEARING] No destination or location")
+            return nil
+        }
+
+        let bearing = calculateBearing(from: location.coordinate, to: destination)
+        print("🧭 [BEARING] Destination at \(bearing)°, current heading: \(currentHeading)°, relative: \(bearing - currentHeading)°")
+        return bearing
+    }
+
+    // MARK: - Flight Mode Projection Functions
+
+    /// Calculate a destination coordinate from a starting point, bearing (degrees), and distance (meters)
+    private func calculateDestinationCoordinate(from start: CLLocationCoordinate2D, bearing: Double, distance: Double) -> CLLocationCoordinate2D {
+        let earthRadius = 6371000.0 // meters
+
+        let bearingRadians = bearing * .pi / 180
+        let lat1 = start.latitude * .pi / 180
+        let lon1 = start.longitude * .pi / 180
+
+        let angularDistance = distance / earthRadius
+
+        let lat2 = asin(sin(lat1) * cos(angularDistance) +
+                        cos(lat1) * sin(angularDistance) * cos(bearingRadians))
+
+        let lon2 = lon1 + atan2(sin(bearingRadians) * sin(angularDistance) * cos(lat1),
+                                cos(angularDistance) - sin(lat1) * sin(lat2))
+
+        return CLLocationCoordinate2D(
+            latitude: lat2 * 180 / .pi,
+            longitude: lon2 * 180 / .pi
+        )
+    }
+
+    /// Update flight mode projection ray and time markers based on current heading and speed
+    private func updateFlightModeProjection() {
+        guard let location = locationManager.userLocation, flightMode else {
+            // Clear projection if flight mode is off or no location
+            projectionRayLine = []
+            projection5MinMark = nil
+            projection10MinMark = nil
+            projection15MinMark = nil
+            return
+        }
+
+        // Calculate heading from movement (last 30 feet) or GPS course
+        var projectionHeading: Double = 0
+        if headingLocationHistory.count >= 2 {
+            let oldest = headingLocationHistory.first!
+            let newest = location
+            projectionHeading = calculateBearing(from: oldest.coordinate, to: newest.coordinate)
+            print("🚁 [FLIGHT MODE] Heading from movement: \(projectionHeading)°")
+        } else if location.course >= 0 {
+            // Fallback to GPS course when not enough movement data
+            projectionHeading = location.course
+            print("🚁 [FLIGHT MODE] Heading from GPS course: \(projectionHeading)°")
+        } else {
+            // No heading data available
+            print("🚁 [FLIGHT MODE] No heading data available")
+            projectionRayLine = []
+            projection5MinMark = nil
+            projection10MinMark = nil
+            projection15MinMark = nil
+            return
+        }
+
+        // Calculate average speed (m/s)
+        let avgSpeed = calculateAverageSpeed()
+        guard avgSpeed > 0 else {
+            print("🚁 [FLIGHT MODE] No speed data (stationary)")
+            projectionRayLine = []
+            projection5MinMark = nil
+            projection10MinMark = nil
+            projection15MinMark = nil
+            return
+        }
+
+        print("🚁 [FLIGHT MODE] Avg speed: \(avgSpeed) m/s (\(avgSpeed * 2.23694) mph)")
+
+        // Calculate projection points
+        let currentCoord = location.coordinate
+
+        // 5 minute projection
+        let distance5min = avgSpeed * 5 * 60 // meters
+        let mark5 = calculateDestinationCoordinate(from: currentCoord, bearing: projectionHeading, distance: distance5min)
+        projection5MinMark = mark5
+
+        // 10 minute projection
+        let distance10min = avgSpeed * 10 * 60 // meters
+        let mark10 = calculateDestinationCoordinate(from: currentCoord, bearing: projectionHeading, distance: distance10min)
+        projection10MinMark = mark10
+
+        // 15 minute projection
+        let distance15min = avgSpeed * 15 * 60 // meters
+        let mark15 = calculateDestinationCoordinate(from: currentCoord, bearing: projectionHeading, distance: distance15min)
+        projection15MinMark = mark15
+
+        // Create projection ray line from current location to 15-minute mark
+        projectionRayLine = [currentCoord, mark15]
+
+        print("🚁 [FLIGHT MODE] Projection updated - 5min: \(formatDistance(distance5min)), 10min: \(formatDistance(distance10min)), 15min: \(formatDistance(distance15min))")
+    }
+
+    private func adjustZoomForSpeed(speed: CLLocationSpeed, coordinate: CLLocationCoordinate2D) {
+        guard speed >= 0 else { return }
+
+        // Only update zoom every 2 seconds to prevent excessive updates
+        let now = Date()
+        guard now.timeIntervalSince(lastSpeedZoomUpdate) > 2.0 else { return }
+        lastSpeedZoomUpdate = now
+
+        // Convert m/s to mph
+        let mph = speed * 2.23694
+
+        // Ford F-150 style altitude levels based on speed (higher altitude = zoomed out)
+        let targetAltitude: CLLocationDistance
+        if mph < 5 {
+            // Stopped/very slow - close zoom to see street details
+            targetAltitude = 300 // ~300 meters altitude (tight zoom)
+        } else if mph < 25 {
+            // City driving - moderate zoom
+            targetAltitude = 500 // ~500 meters
+        } else if mph < 45 {
+            // Suburban/rural - wider view to see upcoming turns
+            targetAltitude = 800 // ~800 meters
+        } else if mph < 65 {
+            // Highway speeds - zoom out to see far ahead
+            targetAltitude = 1500 // ~1500 meters
+        } else {
+            // High speed highway - maximum zoom out
+            targetAltitude = 2500 // ~2500 meters
+        }
+
+        // Only update if altitude changed significantly
+        if abs(navigationCameraAltitude - targetAltitude) > 100 {
+            navigationCameraAltitude = targetAltitude
+            print("🔍 [ZOOM] Speed: \(Int(mph)) mph → Altitude: \(Int(targetAltitude))m")
+            // The 3D camera will be updated via the binding in MapRepresentable
+        }
+    }
+
+    private func showWaypointRemoveAlert(index: Int) {
+        guard index < navigationManager.waypoints.count else { return }
+
+        let alert = UIAlertController(
+            title: "Remove Waypoint",
+            message: "Remove waypoint \(index + 1)?",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "Remove", style: .destructive) { _ in
+            self.navigationManager.removeWaypoint(at: index)
+        })
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let root = scene.windows.first?.rootViewController {
+            root.present(alert, animated: true)
         }
     }
 

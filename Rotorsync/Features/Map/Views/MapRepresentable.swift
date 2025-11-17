@@ -16,6 +16,21 @@ struct MapRepresentable: UIViewRepresentable {
     @Binding var shouldForceUpdate: Bool
     @Binding var isMeasuring: Bool
     @Binding var measurementPins: [(coordinate: CLLocationCoordinate2D, name: String)]
+    @Binding var navigationRoute: NavigationRoute?
+    @Binding var allRoutes: [NavigationRoute]
+    @Binding var selectedRouteIndex: Int?
+    @Binding var isNavigating: Bool
+    @Binding var waypoints: [CLLocationCoordinate2D]
+    @Binding var isAddingWaypoint: Bool
+    @Binding var navigationCameraAltitude: CLLocationDistance
+    @Binding var flyToLine: [CLLocationCoordinate2D]
+    @Binding var remainingRoutePolyline: MKPolyline?
+    @Binding var forceOverlayRefresh: Bool
+    @Binding var projectionRayLine: [CLLocationCoordinate2D]
+    @Binding var projection5MinMark: CLLocationCoordinate2D?
+    @Binding var projection10MinMark: CLLocationCoordinate2D?
+    @Binding var projection15MinMark: CLLocationCoordinate2D?
+    @Binding var flightMode: Bool
 
     let devices: [Device]
     let onPinTapped: (DroppedPinViewModel) -> Void
@@ -24,6 +39,9 @@ struct MapRepresentable: UIViewRepresentable {
     let onFieldTapped: (FieldData) -> Void
     let onLongPressPinDropped: (CLLocationCoordinate2D, String) -> Void
     let onMeasurementTap: (CLLocationCoordinate2D) -> Void
+    let onRouteTapped: (Int) -> Void
+    let onWaypointTapped: (Int) -> Void
+    let onAddWaypoint: (CLLocationCoordinate2D) -> Void
 
     func makeUIView(context: Context) -> MKMapView {
         let mv = MKMapView()
@@ -31,6 +49,12 @@ struct MapRepresentable: UIViewRepresentable {
         mv.showsUserLocation = true
         mv.mapType = mapStyle.mapType
         mv.userTrackingMode = userTrackingMode
+
+        // Enable 3D camera controls
+        mv.isPitchEnabled = true
+        mv.isRotateEnabled = true
+        mv.showsBuildings = true
+        print("📷 [3D CAMERA] 3D controls enabled")
 
         let longPress = UILongPressGestureRecognizer(
             target: context.coordinator,
@@ -53,47 +77,81 @@ struct MapRepresentable: UIViewRepresentable {
         uiView.mapType = mapStyle.mapType
         // IMPORTANT: Update parent reference so coordinator has latest bindings
         context.coordinator.parent = self
-        
+
+        // Don't automatically reset interaction flag during navigation
+        // User has full control - they pan freely and manually tap button to re-center
+        if !isNavigating {
+            // Only manage interaction flag when NOT navigating
+            // During navigation, user controls tracking mode with button
+        }
+
         // Update tracking mode
+        // IMPORTANT: Don't use followWithHeading during 3D navigation - it forces pitch to 0
         if uiView.userTrackingMode != userTrackingMode {
-            uiView.userTrackingMode = userTrackingMode
+            // Only set tracking mode if NOT doing 3D navigation
+            if !(isNavigating && userTrackingMode == .followWithHeading) {
+                uiView.userTrackingMode = userTrackingMode
+                print("🗺️ [MAP] Set tracking mode to: \(userTrackingMode.rawValue)")
+            } else {
+                print("📷 [3D] Skipping tracking mode - using custom 3D camera instead")
+            }
+        }
+
+        // Custom 3D camera tracking during navigation
+        if isNavigating && userTrackingMode == .followWithHeading {
+            if let userLocation = uiView.userLocation.location {
+                let heading = userLocation.course >= 0 ? userLocation.course : 0
+                context.coordinator.update3DNavigationCameraManual(
+                    uiView,
+                    coordinate: userLocation.coordinate,
+                    altitude: navigationCameraAltitude,
+                    heading: heading
+                )
+            }
         }
 
         // Update region when there's a new programmatic region to display
         if let region = cameraPosition.region {
-            let cur = uiView.region
-            
-            // Check if regions are different
-            let centerDiff = abs(cur.center.latitude - region.center.latitude) > 0.0001 ||
-                             abs(cur.center.longitude - region.center.longitude) > 0.0001
-            let spanDiff = abs(cur.span.latitudeDelta - region.span.latitudeDelta) > 0.001 ||
-                           abs(cur.span.longitudeDelta - region.span.longitudeDelta) > 0.001
-            
-            let shouldUpdate = centerDiff || spanDiff
-            
-            // Only force update if:
-            // 1. Force flag is set (button was just pressed), OR
-            // 2. User is not interacting AND there's a significant change
-            if shouldUpdate {
-                if shouldForceUpdate {
-                    // Force update from button press
-                    print("🗺️ FORCING update from button press")
-                    
-                    // Reset interaction flag to allow this update and future programmatic updates
-                    context.coordinator.isUserInteracting = false
-                    
-                    uiView.setRegion(region, animated: true)
-                    
-                    // Reset the flag after update
-                    DispatchQueue.main.async {
-                        self.shouldForceUpdate = false
+            // CRITICAL FIX: Skip manual region updates when MapKit is controlling the camera
+            // During .followWithHeading or .follow, MapKit manages zoom/position automatically
+            if userTrackingMode == .followWithHeading || userTrackingMode == .follow {
+                print("🗺️ [MAP] Skipping region update - tracking mode controls camera (\(userTrackingMode.rawValue))")
+                // Let MapKit handle all camera updates during tracking
+            } else {
+                let cur = uiView.region
+
+                // Check if regions are different
+                let centerDiff = abs(cur.center.latitude - region.center.latitude) > 0.0001 ||
+                                 abs(cur.center.longitude - region.center.longitude) > 0.0001
+                let spanDiff = abs(cur.span.latitudeDelta - region.span.latitudeDelta) > 0.001 ||
+                               abs(cur.span.longitudeDelta - region.span.longitudeDelta) > 0.001
+
+                let shouldUpdate = centerDiff || spanDiff
+
+                // Only force update if:
+                // 1. Force flag is set (button was just pressed), OR
+                // 2. User is not interacting AND there's a significant change
+                if shouldUpdate {
+                    if shouldForceUpdate {
+                        // Force update from button press
+                        print("🗺️ FORCING update from button press")
+
+                        // Reset interaction flag to allow this update and future programmatic updates
+                        context.coordinator.isUserInteracting = false
+
+                        uiView.setRegion(region, animated: true)
+
+                        // Reset the flag after update
+                        DispatchQueue.main.async {
+                            self.shouldForceUpdate = false
+                        }
+                    } else if !context.coordinator.isUserInteracting {
+                        // Normal programmatic update (not from button)
+                        print("🗺️ Normal programmatic update")
+                        uiView.setRegion(region, animated: true)
+                    } else {
+                        print("⚠️ Skipping update - user is interacting")
                     }
-                } else if !context.coordinator.isUserInteracting {
-                    // Normal programmatic update (not from button)
-                    print("🗺️ Normal programmatic update")
-                    uiView.setRegion(region, animated: true)
-                } else {
-                    print("⚠️ Skipping update - user is interacting")
                 }
             }
         }
@@ -136,12 +194,48 @@ struct MapRepresentable: UIViewRepresentable {
 
     class Coordinator: NSObject, MKMapViewDelegate {
         var parent: MapRepresentable
-        var isUserInteracting = false  // Add this flag
-        private var interactionTimer: Timer?
+        var isUserInteracting = false
+        var last3DCameraAltitude: CLLocationDistance = 0
+        var last3DCameraHeading: CLLocationDirection = 0
+        var camera3DApplied: Bool = false
+        var lastOverlayUpdateHash: Int = 0
 
 
         init(_ parent: MapRepresentable) {
             self.parent = parent
+        }
+
+        // MARK: - 3D Camera Management
+        func update3DNavigationCameraManual(_ mapView: MKMapView, coordinate: CLLocationCoordinate2D, altitude: CLLocationDistance, heading: CLLocationDirection) {
+            // Only update if values changed significantly
+            let altitudeChanged = abs(altitude - last3DCameraAltitude) > 100
+            let headingChanged = abs(heading - last3DCameraHeading) > 10
+
+            if !camera3DApplied || altitudeChanged || headingChanged {
+                print("📷 [3D CAMERA] Updating 3D camera - altitude: \(altitude)m, heading: \(heading)°")
+
+                // Ensure map type supports 3D
+                if mapView.mapType == .satellite || mapView.mapType == .hybrid {
+                    print("📷 [3D CAMERA] Switching to standard map type")
+                    mapView.mapType = .standard
+                }
+
+                // Create 3D camera manually (NOT using tracking mode)
+                let camera = MKMapCamera(
+                    lookingAtCenter: coordinate,
+                    fromDistance: altitude,
+                    pitch: 50.0,
+                    heading: heading
+                )
+
+                print("📷 [3D CAMERA] Applying camera - center: \(coordinate.latitude), pitch: 50°")
+                mapView.setCamera(camera, animated: camera3DApplied) // Animate after first
+                print("📷 [3D CAMERA] Result - pitch: \(mapView.camera.pitch)°")
+
+                last3DCameraAltitude = altitude
+                last3DCameraHeading = heading
+                camera3DApplied = true
+            }
         }
 
         @objc func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
@@ -166,24 +260,78 @@ struct MapRepresentable: UIViewRepresentable {
                 return
             }
 
+            // If in waypoint adding mode, add waypoint at tap location
+            if parent.isAddingWaypoint {
+                print("📍 [TAP] Adding waypoint at: \(coord.latitude), \(coord.longitude)")
+                parent.onAddWaypoint(coord)
+                return
+            }
+
+            // Check if tap is on a route during route selection
+            if !parent.allRoutes.isEmpty {
+                for overlay in mv.overlays {
+                    if let polyline = overlay as? MKPolyline,
+                       polyline.title == "route_option",
+                       let subtitle = polyline.subtitle,
+                       subtitle.starts(with: "route_") {
+
+                        let routeIndexStr = subtitle.replacingOccurrences(of: "route_", with: "")
+                        if let routeIndex = Int(routeIndexStr) {
+                            // Check if tap is near this route
+                            if isTapNearPolyline(tapPoint: pt, polyline: polyline, mapView: mv) {
+                                print("🗺️ [TAP] Selected route \(routeIndex)")
+                                parent.onRouteTapped(routeIndex)
+                                return
+                            }
+                        }
+                    }
+                }
+            }
+
             // Check if tap is inside any field polygon
             for field in parent.importedFields {
                 let polygon = MKPolygon(coordinates: field.coordinates, count: field.coordinates.count)
                 let renderer = MKPolygonRenderer(polygon: polygon)
                 let mapPoint = MKMapPoint(coord)
                 let rendererPoint = renderer.point(for: mapPoint)
-                
+
                 if renderer.path.contains(rendererPoint) {
                     parent.onFieldTapped(field)
                     return
                 }
             }
         }
+
+        // Helper to detect if tap is near a polyline
+        private func isTapNearPolyline(tapPoint: CGPoint, polyline: MKPolyline, mapView: MKMapView) -> Bool {
+            let tapCoord = mapView.convert(tapPoint, toCoordinateFrom: mapView)
+            let tapLocation = CLLocation(latitude: tapCoord.latitude, longitude: tapCoord.longitude)
+
+            // Check distance to each point along the polyline
+            let points = polyline.points()
+            let count = polyline.pointCount
+
+            var minDistance: CLLocationDistance = .greatestFiniteMagnitude
+
+            for i in 0..<count {
+                let pointCoord = points[i].coordinate
+                let pointLocation = CLLocation(latitude: pointCoord.latitude, longitude: pointCoord.longitude)
+                let distance = tapLocation.distance(from: pointLocation)
+
+                if distance < minDistance {
+                    minDistance = distance
+                }
+            }
+
+            // Consider tap "near" if within 100 meters of any route point
+            return minDistance < 100
+        }
         
         func updateAnnotations(_ mapView: MKMapView, parent: MapRepresentable) {
             // Only update if pins/devices actually changed
             let currentAnnotations = mapView.annotations.filter { !($0 is MKUserLocation) }
-            let expectedCount = parent.droppedPins.count + parent.groupPins.count + parent.devices.count + parent.measurementPins.count
+            let projectionMarkersCount = [parent.projection5MinMark, parent.projection10MinMark, parent.projection15MinMark].compactMap { $0 }.count
+            let expectedCount = parent.droppedPins.count + parent.groupPins.count + parent.devices.count + parent.measurementPins.count + parent.waypoints.count + projectionMarkersCount
 
             // Only refresh annotations if count changed
             if currentAnnotations.count != expectedCount {
@@ -225,13 +373,64 @@ struct MapRepresentable: UIViewRepresentable {
                     a.subtitle = "measurement_pin"
                     mapView.addAnnotation(a)
                 }
+
+                // Add waypoint markers
+                for (index, waypoint) in parent.waypoints.enumerated() {
+                    let a = MKPointAnnotation()
+                    a.coordinate = waypoint
+                    a.title = "Waypoint \(index + 1)"
+                    a.subtitle = "waypoint_\(index)"
+                    mapView.addAnnotation(a)
+                }
+
+                // Add flight mode projection time markers
+                if let mark5 = parent.projection5MinMark {
+                    let a = MKPointAnnotation()
+                    a.coordinate = mark5
+                    a.title = "5 min"
+                    a.subtitle = "projection_5min"
+                    mapView.addAnnotation(a)
+                }
+                if let mark10 = parent.projection10MinMark {
+                    let a = MKPointAnnotation()
+                    a.coordinate = mark10
+                    a.title = "10 min"
+                    a.subtitle = "projection_10min"
+                    mapView.addAnnotation(a)
+                }
+                if let mark15 = parent.projection15MinMark {
+                    let a = MKPointAnnotation()
+                    a.coordinate = mark15
+                    a.title = "15 min"
+                    a.subtitle = "projection_15min"
+                    mapView.addAnnotation(a)
+                }
             }
-            
+
             // Handle overlays separately
             handleOverlays(mapView, parent: parent)
         }
         
         func handleOverlays(_ mapView: MKMapView, parent: MapRepresentable) {
+            // Create hash of current overlay state (broken up for compiler)
+            let fieldsHash = parent.importedFields.count * 1000
+            let routesHash = parent.allRoutes.count * 100
+            let navRouteHash = (parent.navigationRoute != nil ? 50 : 0)
+            let measurementHash = parent.measurementPins.count * 10
+            let flyLineHash = parent.flyToLine.count * 5
+            let projectionHash = parent.projectionRayLine.count * 3
+            let remainingRouteHash = (parent.remainingRoutePolyline?.pointCount ?? 0)
+            let forceRefreshHash = (parent.forceOverlayRefresh ? 1 : 0)
+            let overlayHash = fieldsHash + routesHash + navRouteHash + measurementHash + flyLineHash + projectionHash + remainingRouteHash + forceRefreshHash
+
+            // Only update if overlay data actually changed
+            if overlayHash == lastOverlayUpdateHash {
+                return // Skip - no changes
+            }
+
+            print("🗺️ [OVERLAYS] Updating overlays - hash changed from \(lastOverlayUpdateHash) to \(overlayHash)")
+            lastOverlayUpdateHash = overlayHash
+
             mapView.removeOverlays(mapView.overlays)
             
             if parent.showImportedFields {
@@ -290,6 +489,22 @@ struct MapRepresentable: UIViewRepresentable {
                 mapView.addOverlay(line)
             }
 
+            // Add fly-to straight line
+            if !parent.flyToLine.isEmpty {
+                let line = MKPolyline(coordinates: parent.flyToLine, count: parent.flyToLine.count)
+                line.title = "fly_to_line"
+                mapView.addOverlay(line)
+                print("✈️ [OVERLAY] Added fly-to line with \(parent.flyToLine.count) points")
+            }
+
+            // Add flight mode projection ray
+            if !parent.projectionRayLine.isEmpty {
+                let line = MKPolyline(coordinates: parent.projectionRayLine, count: parent.projectionRayLine.count)
+                line.title = "projection_ray_line"
+                mapView.addOverlay(line)
+                print("🚁 [OVERLAY] Added flight mode projection ray with \(parent.projectionRayLine.count) points")
+            }
+
             // Add measurement lines between pins
             if parent.measurementPins.count > 1 {
                 for i in 0..<(parent.measurementPins.count - 1) {
@@ -300,18 +515,144 @@ struct MapRepresentable: UIViewRepresentable {
                     mapView.addOverlay(line)
                 }
             }
+
+            // Add navigation routes
+            if !parent.allRoutes.isEmpty {
+                // During route selection - show all routes
+                for (index, route) in parent.allRoutes.enumerated() {
+                    // Use combined polyline for waypoint routes, otherwise use route polyline
+                    let basePolyline = route.combinedPolyline ?? route.route.polyline
+                    let isSelected = parent.selectedRouteIndex == index
+
+                    print("🗺️ [OVERLAY] Route \(index): hasCombined=\(route.combinedPolyline != nil), points=\(basePolyline.pointCount)")
+
+                    // Create a new polyline with the same coordinates to avoid modifying the original
+                    let points = basePolyline.points()
+                    var coordinates: [CLLocationCoordinate2D] = []
+                    for i in 0..<basePolyline.pointCount {
+                        coordinates.append(points[i].coordinate)
+                    }
+
+                    // Add white border for selected route (rendered first, underneath)
+                    if isSelected {
+                        let borderPolyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
+                        borderPolyline.title = "route_border"
+                        borderPolyline.subtitle = "border_\(index)"
+                        mapView.addOverlay(borderPolyline, level: .aboveRoads)
+                        print("🗺️ [OVERLAY] Added border for route \(index)")
+                    }
+
+                    // Add colored route (rendered on top)
+                    let routePolyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
+                    routePolyline.title = "route_option"
+                    routePolyline.subtitle = "route_\(index)"
+                    mapView.addOverlay(routePolyline, level: .aboveRoads)
+                    print("🗺️ [OVERLAY] Added route \(index) with \(coordinates.count) points, title=\(routePolyline.title ?? "nil")")
+                }
+            } else if let navRoute = parent.navigationRoute {
+                // During active navigation - show only remaining route (trimmed as user progresses)
+                let basePolyline = parent.remainingRoutePolyline ?? navRoute.combinedPolyline ?? navRoute.route.polyline
+
+                print("🗺️ [OVERLAY] Navigation route: remaining=\(parent.remainingRoutePolyline != nil), points=\(basePolyline.pointCount)")
+
+                // Create new polylines with coordinates
+                let points = basePolyline.points()
+                var coordinates: [CLLocationCoordinate2D] = []
+                for i in 0..<basePolyline.pointCount {
+                    coordinates.append(points[i].coordinate)
+                }
+
+                // Add white border (rendered first)
+                let borderPolyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
+                borderPolyline.title = "route_border"
+                borderPolyline.subtitle = "main_border"
+                mapView.addOverlay(borderPolyline, level: .aboveRoads)
+
+                // Add blue route on top
+                let routePolyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
+                routePolyline.title = "navigation_route"
+                routePolyline.subtitle = "main_route"
+                mapView.addOverlay(routePolyline, level: .aboveRoads)
+                print("🗺️ [OVERLAY] Added navigation route with \(coordinates.count) points (remaining only)")
+            }
         }
 
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
             // Handle MKPolyline (spray lines)
             if let polyline = overlay as? MKPolyline {
                 let r = MKPolylineRenderer(polyline: polyline)
+                print("🎨 [RENDERER] Rendering polyline: title=\(polyline.title ?? "nil"), subtitle=\(polyline.subtitle ?? "nil"), points=\(polyline.pointCount)")
+
+                // Check if it's a white border for selected route
+                if polyline.title == "route_border" {
+                    print("🎨 [RENDERER] → White border (12px)")
+                    r.strokeColor = UIColor.white
+                    r.lineWidth = 12 // Wider than the route itself
+                    r.lineCap = .round
+                    r.lineJoin = .round
+                    return r
+                }
+
+                // Check if it's a route option during selection
+                if polyline.title == "route_option", let subtitle = polyline.subtitle,
+                   subtitle.starts(with: "route_") {
+                    print("🎨 [RENDERER] → Route option detected")
+                    let routeIndexStr = subtitle.replacingOccurrences(of: "route_", with: "")
+                    if let routeIndex = Int(routeIndexStr) {
+                        let isSelected = parent.selectedRouteIndex == routeIndex
+
+                        // Brighter blue routes for better visibility
+                        if isSelected {
+                            // Selected route - bright solid blue (border added separately)
+                            r.strokeColor = UIColor.systemBlue
+                            r.lineWidth = 7
+                            print("🎨 [RENDERER] → Selected route \(routeIndex): blue 7px")
+                        } else {
+                            // Alternate routes - bright blue, slightly transparent
+                            r.strokeColor = UIColor.systemBlue.withAlphaComponent(0.75)
+                            r.lineWidth = 6
+                            print("🎨 [RENDERER] → Alternate route \(routeIndex): blue 75% 6px")
+                        }
+
+                        r.lineCap = .round
+                        r.lineJoin = .round
+                        return r
+                    }
+                }
+
+                // Check if it's the active navigation route
+                if polyline.title == "navigation_route" {
+                    r.strokeColor = UIColor.systemBlue
+                    r.lineWidth = 7
+                    r.lineCap = .round
+                    r.lineJoin = .round
+                    return r
+                }
 
                 // Check if it's a measurement line
                 if polyline.title == "measurement_line" {
                     r.strokeColor = UIColor.systemYellow
                     r.lineWidth = 4
                     r.lineDashPattern = [8, 4] // Dashed line
+                    return r
+                }
+
+                // Check if it's a fly-to straight line
+                if polyline.title == "fly_to_line" {
+                    r.strokeColor = UIColor.systemGreen
+                    r.lineWidth = 5
+                    r.lineDashPattern = [10, 5] // Dashed green line
+                    r.lineCap = .round
+                    return r
+                }
+
+                // Check if it's a flight mode projection ray
+                if polyline.title == "projection_ray_line" {
+                    r.strokeColor = UIColor.systemCyan
+                    r.lineWidth = 4
+                    r.lineDashPattern = [8, 4] // Dashed cyan line
+                    r.lineCap = .round
+                    r.alpha = 0.8
                     return r
                 }
 
@@ -434,7 +775,8 @@ struct MapRepresentable: UIViewRepresentable {
 
         
         func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
-            // User started interacting with map - block programmatic updates
+            // User started interacting with map
+            // When user pans during tracking mode, MapKit automatically disables tracking
             isUserInteracting = true
         }
         
@@ -477,7 +819,105 @@ struct MapRepresentable: UIViewRepresentable {
         }
         
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-            guard !(annotation is MKUserLocation) else { return nil }
+            // Customize user location to show helicopter icon only when flight mode is enabled
+            if annotation is MKUserLocation {
+                // If flight mode is off, return nil to show default blue dot
+                guard parent.flightMode else { return nil }
+
+                let id = "userLocation"
+                var view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
+                if view == nil {
+                    view = MKAnnotationView(annotation: annotation, reuseIdentifier: id)
+                } else {
+                    view?.annotation = annotation
+                }
+
+                // Use R44 helicopter image from assets
+                if let helicopterImage = UIImage(named: "r44_helicopter") {
+                    // Resize image to appropriate size for map marker
+                    let targetSize = CGSize(width: 40, height: 40)
+                    let renderer = UIGraphicsImageRenderer(size: targetSize)
+                    let resizedImage = renderer.image { _ in
+                        helicopterImage.draw(in: CGRect(origin: .zero, size: targetSize))
+                    }
+
+                    // Get current heading and rotate helicopter to match
+                    if let userLocation = mapView.userLocation.location, userLocation.course >= 0 {
+                        let heading = userLocation.course
+                        // Convert degrees to radians for rotation
+                        let radians = CGFloat(heading * .pi / 180.0)
+
+                        // Create rotated image
+                        let rotatedSize = targetSize
+                        let rotatedRenderer = UIGraphicsImageRenderer(size: rotatedSize)
+                        let rotatedImage = rotatedRenderer.image { context in
+                            // Move origin to center
+                            context.cgContext.translateBy(x: rotatedSize.width / 2, y: rotatedSize.height / 2)
+                            // Rotate
+                            context.cgContext.rotate(by: radians)
+                            // Draw image centered
+                            resizedImage.draw(in: CGRect(x: -targetSize.width / 2, y: -targetSize.height / 2, width: targetSize.width, height: targetSize.height))
+                        }
+                        view?.image = rotatedImage
+                    } else {
+                        // No valid heading, use unrotated image
+                        view?.image = resizedImage
+                    }
+                } else {
+                    // Fallback to nil if image not found
+                    view?.image = nil
+                }
+
+                view?.centerOffset = CGPoint(x: 0, y: 0)
+                return view
+            }
+
+            // Handle flight mode projection time markers - CYAN
+            if let subtitle = annotation.subtitle as? String, subtitle.starts(with: "projection_") {
+                let id = "projectionMarker"
+                var view = mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView
+                if view == nil {
+                    view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: id)
+                    view?.canShowCallout = true
+                    view?.displayPriority = .required
+                } else {
+                    view?.annotation = annotation
+                }
+
+                // Set marker appearance based on time mark
+                view?.markerTintColor = .systemCyan
+                if subtitle.contains("5min") {
+                    view?.glyphText = "5"
+                } else if subtitle.contains("10min") {
+                    view?.glyphText = "10"
+                } else if subtitle.contains("15min") {
+                    view?.glyphText = "15"
+                }
+
+                return view
+            }
+
+            // Handle waypoint markers - BLUE numbered circles
+            if let subtitle = annotation.subtitle as? String, subtitle.starts(with: "waypoint_") {
+                let id = "waypointMarker"
+                var view = mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView
+                if view == nil {
+                    view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: id)
+                    view?.canShowCallout = true
+                    view?.displayPriority = .required
+                } else {
+                    view?.annotation = annotation
+                }
+
+                // Extract waypoint number
+                let waypointIndexStr = subtitle.replacingOccurrences(of: "waypoint_", with: "")
+                if let index = Int(waypointIndexStr) {
+                    view?.glyphText = "\(index + 1)"
+                }
+
+                view?.markerTintColor = .systemBlue
+                return view
+            }
 
             // Handle measurement pins - YELLOW
             if let subtitle = annotation.subtitle as? String, subtitle == "measurement_pin" {
@@ -680,6 +1120,17 @@ struct MapRepresentable: UIViewRepresentable {
         func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
             guard let ann = view.annotation else { return }
 
+            // Handle waypoint markers
+            if let subtitle = ann.subtitle as? String, subtitle.starts(with: "waypoint_") {
+                let waypointIndexStr = subtitle.replacingOccurrences(of: "waypoint_", with: "")
+                if let index = Int(waypointIndexStr) {
+                    print("📍 [TAP] Waypoint \(index + 1) tapped")
+                    parent.onWaypointTapped(index)
+                }
+                mapView.deselectAnnotation(ann, animated: true)
+                return
+            }
+
             // Handle local pins
             if let subtitle = ann.subtitle as? String, subtitle.starts(with: "dropped_pin_") {
                 if let title = ann.title as? String,
@@ -701,6 +1152,16 @@ struct MapRepresentable: UIViewRepresentable {
                 parent.onDeviceTapped(dev)
             }
             mapView.deselectAnnotation(ann, animated: true)
+        }
+
+        // MARK: - Tracking Mode Delegate
+        func mapView(_ mapView: MKMapView, didChange mode: MKUserTrackingMode, animated: Bool) {
+            print("🗺️ [DELEGATE] Tracking mode changed to: \(mode.rawValue)")
+
+            // Sync with SwiftUI binding
+            DispatchQueue.main.async {
+                self.parent.userTrackingMode = mode
+            }
         }
     }
 }

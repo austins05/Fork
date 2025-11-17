@@ -5,7 +5,9 @@ import CoreLocation
 struct PinActionSheet: View {
     let pinId: UUID
     let coreDataService: CoreDataService
-    
+    var onStartNavigation: ((CLLocationCoordinate2D) -> Void)?
+    var onStartFlyTo: ((CLLocationCoordinate2D) -> Void)?
+
     @State private var pin: PinEntity?
     @State private var selectedIcon = "mappin"
     @State private var showIconPicker = false
@@ -99,7 +101,14 @@ struct PinActionSheet: View {
                             Label("Drive To", systemImage: "car.fill")
                                 .foregroundColor(.blue)
                         }
-                        
+
+                        Button {
+                            flyToLocation()
+                        } label: {
+                            Label("Fly To", systemImage: "airplane")
+                                .foregroundColor(.green)
+                        }
+
                         Button("Open in Google Maps") { openInMaps() }
                         Button("Delete Pin", role: .destructive) { deletePin() }
                     }
@@ -363,21 +372,57 @@ struct PinActionSheet: View {
     }
     
     private func driveToLocation() {
-        guard let currentPin = pin else { return }
+        print("🚗 [PIN ACTION] driveToLocation called")
+        guard let currentPin = pin else {
+            print("❌ [PIN ACTION] No current pin")
+            return
+        }
         let coord = currentPin.coordinate
-        
+        print("📍 [PIN ACTION] Coordinate: \(coord.latitude), \(coord.longitude)")
+
+        // Use in-app navigation if callback is provided
+        if let onStartNavigation = onStartNavigation {
+            print("✅ [PIN ACTION] Using IN-APP navigation (callback exists)")
+            onStartNavigation(coord)
+            dismiss()
+            return
+        }
+
+        // Fallback to external navigation
+        print("⚠️ [PIN ACTION] No callback - using EXTERNAL navigation")
         // Google Maps navigation URL
         let googleNavURL = URL(string: "comgooglemaps://?daddr=\(coord.latitude),\(coord.longitude)&directionsmode=driving")!
-        
+
         if UIApplication.shared.canOpenURL(googleNavURL) {
             UIApplication.shared.open(googleNavURL)
-            print("✅ Started navigation in Google Maps")
+            print("✅ [PIN ACTION] Opened Google Maps")
         } else {
             // Fallback to Apple Maps
             let appleNavURL = URL(string: "maps://?daddr=\(coord.latitude),\(coord.longitude)&dirflg=d")!
             UIApplication.shared.open(appleNavURL)
-            print("ℹ️ Google Maps not installed, using Apple Maps")
+            print("ℹ️ [PIN ACTION] Opened Apple Maps (Google Maps not installed)")
         }
+        dismiss()
+    }
+
+    private func flyToLocation() {
+        print("✈️ [PIN ACTION] flyToLocation called")
+        guard let currentPin = pin else {
+            print("❌ [PIN ACTION] No current pin")
+            return
+        }
+        let coord = currentPin.coordinate
+        print("📍 [PIN ACTION] Fly to coordinate: \(coord.latitude), \(coord.longitude)")
+
+        // Use fly mode callback if provided
+        if let onStartFlyTo = onStartFlyTo {
+            print("✅ [PIN ACTION] Starting FLY TO mode")
+            onStartFlyTo(coord)
+            dismiss()
+            return
+        }
+
+        print("⚠️ [PIN ACTION] No fly callback - ignoring")
         dismiss()
     }
 }
