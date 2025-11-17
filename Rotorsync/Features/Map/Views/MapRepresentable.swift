@@ -113,11 +113,15 @@ struct MapRepresentable: UIViewRepresentable {
         }
 
         // Update helicopter rotation to match heading when flight mode is enabled
-        if flightMode, let userLocation = uiView.userLocation.location, userLocation.course >= 0 {
-            if let annotationView = uiView.view(for: uiView.userLocation) {
+        if let annotationView = uiView.view(for: uiView.userLocation) {
+            if flightMode, let userLocation = uiView.userLocation.location, userLocation.course >= 0 {
                 let heading = userLocation.course
                 let radians = CGFloat(heading * .pi / 180.0)
                 annotationView.transform = CGAffineTransform(rotationAngle: radians)
+                print("🚁 [ROTATION] Helicopter rotated to \(heading)°")
+            } else {
+                // Reset rotation when flight mode is off
+                annotationView.transform = .identity
             }
         }
 
