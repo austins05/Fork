@@ -133,7 +133,28 @@ class NavigationManager: NSObject, ObservableObject {
     func addWaypoint(_ coordinate: CLLocationCoordinate2D) {
         print("📍 [WAYPOINT] Adding waypoint at: \(coordinate.latitude), \(coordinate.longitude)")
 
-        // Add waypoint immediately
+        // Fix #4: Check waypoint limit
+        guard waypoints.count < 5 else {
+            print("⚠️ [WAYPOINT] Maximum 5 waypoints allowed")
+            status = .error("Maximum 5 waypoints allowed")
+            return
+        }
+
+        // Fix #3: Check for duplicates within 50m
+        let tooClose = waypoints.contains { existing in
+            let existingLoc = CLLocation(latitude: existing.latitude, longitude: existing.longitude)
+            let newLoc = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+            let dist = existingLoc.distance(from: newLoc)
+            return dist < 50
+        }
+        
+        if tooClose {
+            print("⚠️ [WAYPOINT] Waypoint too close to existing waypoint - ignoring")
+            status = .error("Waypoint too close to existing waypoint (minimum 50m separation)")
+            return
+        }
+
+        // Add waypoint
         waypoints.append(coordinate)
         print("📍 [WAYPOINT] Total waypoints: \(waypoints.count)")
 
@@ -258,78 +279,18 @@ class NavigationManager: NSObject, ObservableObject {
         return (points[closestIndex].coordinate, distanceAlongRoute)
     }
 
-    private func calculateOptimalWaypointRoute(from origin: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) {
-        print("🧭 [WAYPOINT OPT] Calculating direct route first for optimization")
-
-        // Step 1: Calculate direct route to see the natural path
-        let directRequest = MKDirections.Request()
-        directRequest.source = MKMapItem(placemark: MKPlacemark(coordinate: origin))
-        directRequest.destination = MKMapItem(placemark: MKPlacemark(coordinate: destination))
-        directRequest.transportType = .automobile
-        directRequest.requestsAlternateRoutes = false
-
-        if settings.avoidHighways {
-            directRequest.highwayPreference = .avoid
+    // Fix #1: Remove infinite recursion - add retryCount parameter with guard
+    private func calculateSegmentedRoute(from origin: CLLocationCoordinate2D, waypoints: [CLLocationCoordinate2D], to destination: CLLocationCoordinate2D, retryCount: Int = 0) {
+        // Guard against infinite recursion
+        guard retryCount < 3 else {
+            print("❌ [WAYPOINT ROUTING] Max retry attempts reached (\(retryCount))")
+            status = .error("Failed to calculate route after \(retryCount) attempts")
+            return
         }
-
-        MKDirections(request: directRequest).calculate { [weak self] response, error in
-            guard let self = self, let directRoute = response?.routes.first else {
-                print("⚠️ [WAYPOINT OPT] Direct route failed, using raw waypoints")
-                self?.calculateSegmentedRoute(from: origin, waypoints: self?.waypoints ?? [], to: destination)
-                return
-            }
-
-            print("✅ [WAYPOINT OPT] Direct route calculated: \(directRoute.distance/1609.34) mi")
-
-            // Step 2: Find optimal points along direct route near each waypoint
-            var optimizedWaypoints: [CLLocationCoordinate2D] = []
-
-            print("📍 [WAYPOINT OPT] Original waypoints: \(self.waypoints.count)")
-            for (index, waypoint) in (self.waypoints).enumerated() {
-                print("📍 [WAYPOINT OPT] Original waypoint \(index+1): \(waypoint.latitude), \(waypoint.longitude)")
-                let optimalPoint = self.findClosestPointOnRoute(to: waypoint, route: directRoute)
-                optimizedWaypoints.append(optimalPoint)
-                print("📍 [WAYPOINT OPT] Optimized waypoint \(index+1): \(optimalPoint.latitude), \(optimalPoint.longitude)")
-            }
-
-            print("📍 [WAYPOINT OPT] Using \(optimizedWaypoints.count) optimized waypoints")
-            // Step 3: Calculate segmented route with optimized waypoints
-            self.calculateSegmentedRoute(from: origin, waypoints: optimizedWaypoints, to: destination)
-        }
-    }
-
-    private func findClosestPointOnRoute(to waypoint: CLLocationCoordinate2D, route: MKRoute) -> CLLocationCoordinate2D {
-        let waypointLocation = CLLocation(latitude: waypoint.latitude, longitude: waypoint.longitude)
-        let points = route.polyline.points()
-        let count = route.polyline.pointCount
-
-        var closestPoint = waypoint
-        var minDistance: CLLocationDistance = .greatestFiniteMagnitude
-
-        // Sample every 5th point for better accuracy (was every 10th)
-        let stride = max(1, count / 200) // Sample ~200 points for better precision
-
-        for i in Swift.stride(from: 0, to: count, by: stride) {
-            let pointCoord = points[i].coordinate
-            let pointLocation = CLLocation(latitude: pointCoord.latitude, longitude: pointCoord.longitude)
-            let distance = waypointLocation.distance(from: pointLocation)
-
-            if distance < minDistance {
-                minDistance = distance
-                closestPoint = pointCoord
-            }
-        }
-
-        print("📍 [WAYPOINT OPT] Snapped waypoint from \(waypointLocation.coordinate.latitude), \(waypointLocation.coordinate.longitude)")
-        print("📍 [WAYPOINT OPT] To point on route: \(closestPoint.latitude), \(closestPoint.longitude)")
-        print("📍 [WAYPOINT OPT] Distance from tap: \(minDistance/1609.34) miles")
-        return closestPoint
-    }
-
-    private func calculateSegmentedRoute(from origin: CLLocationCoordinate2D, waypoints: [CLLocationCoordinate2D], to destination: CLLocationCoordinate2D) {
+        
         // Build coordinate chain: origin → waypoint1 → waypoint2 → ... → destination
         var coordinates = [origin] + waypoints + [destination]
-        print("🧭 [WAYPOINT ROUTING] Total segments: \(coordinates.count - 1)")
+        print("🧭 [WAYPOINT ROUTING] Total segments: \(coordinates.count - 1) (Attempt \(retryCount + 1)/3)")
         print("🧭 [WAYPOINT ROUTING] Origin: \(origin.latitude), \(origin.longitude)")
         for (i, wp) in waypoints.enumerated() {
             print("🧭 [WAYPOINT ROUTING] Waypoint \(i+1): \(wp.latitude), \(wp.longitude)")
@@ -338,7 +299,7 @@ class NavigationManager: NSObject, ObservableObject {
 
         var allSegmentRoutes: [[MKRoute]] = Array(repeating: [], count: coordinates.count - 1)
         let dispatchGroup = DispatchGroup()
-        var hasError = false
+        var failedSegments: [(Int, Error)] = []  // Fix #2: Track failed segments
 
         // Calculate each segment
         for i in 0..<(coordinates.count - 1) {
@@ -348,7 +309,7 @@ class NavigationManager: NSObject, ObservableObject {
             request.source = MKMapItem(placemark: MKPlacemark(coordinate: coordinates[i]))
             request.destination = MKMapItem(placemark: MKPlacemark(coordinate: coordinates[i + 1]))
             request.transportType = .automobile
-            request.requestsAlternateRoutes = true // Request alternates for different routing options
+            request.requestsAlternateRoutes = true
 
             if settings.avoidHighways {
                 request.highwayPreference = .avoid
@@ -363,7 +324,7 @@ class NavigationManager: NSObject, ObservableObject {
 
                 if let error = error {
                     print("❌ [WAYPOINT ROUTING] Segment \(i + 1) failed: \(error.localizedDescription)")
-                    hasError = true
+                    failedSegments.append((i, error))  // Fix #2: Collect errors
                     return
                 }
 
@@ -381,9 +342,21 @@ class NavigationManager: NSObject, ObservableObject {
         dispatchGroup.notify(queue: .main) { [weak self] in
             guard let self = self else { return }
 
-            if hasError {
-                print("❌ [WAYPOINT ROUTING] Failed to calculate all segments")
-                self.status = .error("Failed to calculate route through waypoints")
+            // Fix #2: Handle failed segments with retry logic
+            if !failedSegments.isEmpty {
+                print("❌ [WAYPOINT ROUTING] Failed segments: \(failedSegments.count)/\(coordinates.count - 1)")
+                
+                // If all segments failed, show error
+                if failedSegments.count == coordinates.count - 1 {
+                    self.status = .error("Route calculation failed for all segments")
+                    return
+                }
+                
+                // Retry with delay (Fix #1: increment retry counter)
+                print("🔄 [WAYPOINT ROUTING] Retrying in 1 second (attempt \(retryCount + 2)/3)")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    self.calculateSegmentedRoute(from: origin, waypoints: waypoints, to: destination, retryCount: retryCount + 1)
+                }
                 return
             }
 
@@ -718,10 +691,11 @@ class NavigationManager: NSObject, ObservableObject {
 
         var minDistance = CLLocationDistance.greatestFiniteMagnitude
 
+        let userLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+
         for i in 0..<count {
             let pointCoord = points[i].coordinate
             let pointLocation = CLLocation(latitude: pointCoord.latitude, longitude: pointCoord.longitude)
-            let userLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
             let distance = userLocation.distance(from: pointLocation)
 
             if distance < minDistance {
@@ -733,36 +707,79 @@ class NavigationManager: NSObject, ObservableObject {
     }
 
     private func handleOffRoute() {
-        guard status == .navigating, let dest = destination else { return }
+        // Throttle rerouting (max once per 10 seconds)
+        if let lastReroute = lastRerouteTime, Date().timeIntervalSince(lastReroute) < 10 {
+            print("⏱️ [REROUTE] Skipping reroute - too soon since last attempt")
+            return
+        }
 
-        // Cooldown: Don't reroute more than once every 30 seconds
-        if let lastReroute = lastRerouteTime {
-            let timeSinceLastReroute = Date().timeIntervalSince(lastReroute)
-            if timeSinceLastReroute < 30 {
-                print("⚠️ [OFF ROUTE] Too soon to reroute (last: \(timeSinceLastReroute)s ago)")
-                consecutiveOffRouteCount = 0 // Reset to prevent spam
+        lastRerouteTime = Date()
+        print("🔄 [REROUTE] User is off route - recalculating")
+        status = .rerouting
+
+        if let dest = destination {
+            calculateRoutes(to: dest)
+        }
+    }
+
+    private func arriveAtDestination() {
+        print("🎯 [NAV] Arrived at destination!")
+        status = .arrived
+        speechSynthesizer.stopSpeaking(at: .immediate)
+
+        if voiceGuidanceEnabled {
+            speak("You have arrived at your destination.")
+        }
+    }
+
+    private func announceIfNeeded(distanceToStep distance: Double) {
+        print("🔊 [VOICE] Checking announcement - distance: \(distance)m")
+
+        for threshold in announcementDistances {
+            // Check if we crossed this threshold since last announcement
+            let shouldAnnounce: Bool
+            if let lastDist = lastAnnouncedDistance {
+                shouldAnnounce = lastDist > threshold && distance <= threshold
+            } else {
+                shouldAnnounce = distance <= threshold
+            }
+
+            if shouldAnnounce {
+                print("🔊 [VOICE] Threshold crossed: \(threshold)m")
+                if let instruction = currentStep?.instruction {
+                    let distanceInFeet = Int(distance * 3.28084)
+                    let announcement = "In \(distanceInFeet) feet, \(instruction)"
+                    print("🔊 [VOICE] Speaking: \(announcement)")
+                    speak(announcement)
+                    lastAnnouncedDistance = distance
+                } else {
+                    print("⚠️ [VOICE] No instruction available")
+                }
                 return
             }
         }
 
-        print("🔄 [OFF ROUTE] Rerouting - \(consecutiveOffRouteCount) consecutive off-route readings")
-        lastRerouteTime = Date()
-        status = .rerouting
+        print("🔊 [VOICE] No threshold crossed")
+    }
 
-        if voiceGuidanceEnabled {
-            speak("Recalculating route")
+    private func speak(_ text: String) {
+        print("🔊 [VOICE] speak() called with: \(text)")
+        print("🔊 [VOICE] voiceGuidanceEnabled: \(voiceGuidanceEnabled)")
+
+        guard voiceGuidanceEnabled else {
+            print("⚠️ [VOICE] Voice guidance disabled - not speaking")
+            return
         }
 
-        // Recalculate route
-        calculateRoutes(to: dest)
+        speechSynthesizer.stopSpeaking(at: .immediate)
 
-        // Auto-select first route when recalculated
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            guard let self = self else { return }
-            if case .selectingRoute(let routes) = self.status, let firstRoute = routes.first {
-                self.startNavigation(with: firstRoute)
-            }
-        }
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+        utterance.rate = 0.5
+
+        print("🔊 [VOICE] Starting speech synthesis...")
+        speechSynthesizer.speak(utterance)
+        print("🔊 [VOICE] Speech synthesis started")
     }
 
     private func trimRoutePolyline(userLocation: CLLocation) {
@@ -771,9 +788,9 @@ class NavigationManager: NSObject, ObservableObject {
         let points = fullPolyline.points()
         let count = fullPolyline.pointCount
 
-        // Find closest point index on the route
+        // Find closest point on route to user
         var closestIndex = 0
-        var minDistance: CLLocationDistance = .greatestFiniteMagnitude
+        var minDistance = CLLocationDistance.greatestFiniteMagnitude
 
         for i in 0..<count {
             let pointCoord = points[i].coordinate
@@ -786,140 +803,37 @@ class NavigationManager: NSObject, ObservableObject {
             }
         }
 
-        // Create polyline from closest point to end (only remaining portion)
+        // Create new polyline from closest point forward
         if closestIndex < count - 1 {
-            var remainingCoordinates: [CLLocationCoordinate2D] = []
-
+            var remainingCoords: [CLLocationCoordinate2D] = []
             for i in closestIndex..<count {
-                remainingCoordinates.append(points[i].coordinate)
+                remainingCoords.append(points[i].coordinate)
             }
 
-            // Create new polyline with only remaining portion
-            let newPolyline = MKPolyline(coordinates: remainingCoordinates, count: remainingCoordinates.count)
-            remainingRoutePolyline = newPolyline
-        }
-    }
-
-    private func arriveAtDestination() {
-        status = .arrived
-
-        if voiceGuidanceEnabled {
-            speak("You have arrived at your destination")
-        }
-
-        // Auto-stop navigation after 3 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
-            self?.stopNavigation()
-        }
-    }
-
-    private func announceIfNeeded(distanceToStep: Double) {
-        guard let step = currentStep, !step.instruction.isEmpty else {
-            print("🔊 [VOICE] No current step or empty instruction")
-            return
-        }
-
-        print("🔊 [VOICE] Checking announcements - distance: \(distanceToStep)m (\(distanceToStep * 3.28084)ft)")
-        print("🔊 [VOICE] Current step: \(step.instruction)")
-        print("🔊 [VOICE] Last announced distance: \(lastAnnouncedDistance ?? -1)")
-
-        // Find the appropriate announcement distance (sorted from largest to smallest)
-        for threshold in announcementDistances.sorted(by: >) {
-            // Check if we just crossed this threshold (within 20% tolerance)
-            let inRange = distanceToStep <= threshold && distanceToStep > (threshold * 0.8)
-            print("🔊 [VOICE] Threshold \(threshold)m (\(threshold * 3.28084)ft): inRange=\(inRange)")
-
-            if inRange {
-                // Check if we haven't announced at this distance yet
-                if let lastAnnounced = lastAnnouncedDistance {
-                    // Only announce if this is a closer threshold than we last announced
-                    if threshold < lastAnnounced {
-                        let announcement = "In \(formatDistanceForVoice(distanceToStep)), \(step.instruction)"
-                        print("🔊 [VOICE] Announcing: \(announcement)")
-                        speak(announcement)
-                        lastAnnouncedDistance = threshold
-                        break
-                    }
-                } else {
-                    // First announcement for this step
-                    let announcement = "In \(formatDistanceForVoice(distanceToStep)), \(step.instruction)"
-                    print("🔊 [VOICE] First announcement: \(announcement)")
-                    speak(announcement)
-                    lastAnnouncedDistance = threshold
-                    break
-                }
+            if !remainingCoords.isEmpty {
+                remainingRoutePolyline = MKPolyline(coordinates: remainingCoords, count: remainingCoords.count)
             }
         }
     }
 
-    private func formatDistanceForVoice(_ meters: Double) -> String {
-        let feet = meters * 3.28084
-
-        if feet < 100 {
-            return "50 feet"
-        } else if feet < 1000 {
-            let roundedFeet = Int(round(feet / 50) * 50) // Round to nearest 50ft
-            return "\(roundedFeet) feet"
-        } else {
-            let miles = meters / 1609.34
-            if miles < 0.2 {
-                return "a quarter mile"
-            } else if miles < 0.4 {
-                return "a third of a mile"
-            } else if miles < 0.6 {
-                return "half a mile"
-            } else {
-                return String(format: "%.1f miles", miles)
-            }
-        }
-    }
-
-    private func speak(_ text: String) {
-        print("🔊 [VOICE] Speaking: '\(text)'")
-        print("🔊 [VOICE] Voice enabled: \(voiceGuidanceEnabled)")
-        print("🔊 [VOICE] Synthesizer isSpeaking: \(speechSynthesizer.isSpeaking)")
-
-        // Configure audio session for voice guidance
-        do {
-            let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers, .interruptSpokenAudioAndMixWithOthers])
-            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
-            print("✅ [VOICE] Audio session configured")
-        } catch {
-            print("❌ [VOICE] Audio session error: \(error.localizedDescription)")
-        }
-
-        // Stop any current speech
-        if speechSynthesizer.isSpeaking {
-            speechSynthesizer.stopSpeaking(at: .immediate)
-        }
-
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
-        utterance.rate = 0.52 // Slightly faster than 0.5 for better flow
-        utterance.volume = 1.0
-        utterance.preUtteranceDelay = 0.1 // Small delay before speaking
-        utterance.postUtteranceDelay = 0.1
-
-        print("🔊 [VOICE] Utterance created - text length: \(text.count), rate: \(utterance.rate)")
-        speechSynthesizer.speak(utterance)
-        print("🔊 [VOICE] speak() called on synthesizer")
-
-        // Verify speech started
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            print("🔊 [VOICE] Synthesizer isSpeaking after 0.2s: \(self.speechSynthesizer.isSpeaking)")
-        }
-    }
-
-    // MARK: - Settings
+    // MARK: - Settings Management
     func updateSettings(_ newSettings: NavigationSettings) {
-        settings = newSettings
-        settings.save()
+        self.settings = newSettings
+        print("⚙️ [SETTINGS] Navigation settings updated")
+
+        // If navigating and highway preference changed, recalculate
+        if status == .navigating && settings.avoidHighways != newSettings.avoidHighways {
+            print("🔄 [SETTINGS] Highway preference changed during navigation - recalculating")
+            if let dest = destination {
+                calculateRoutes(to: dest)
+            }
+        }
     }
 
     func toggleVoiceGuidance() {
         voiceGuidanceEnabled.toggle()
         settings.voiceGuidanceEnabled = voiceGuidanceEnabled
         settings.save()
+        print("🔊 [VOICE] Voice guidance toggled")
     }
 }
