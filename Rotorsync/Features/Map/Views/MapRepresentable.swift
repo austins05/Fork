@@ -110,6 +110,15 @@ struct MapRepresentable: UIViewRepresentable {
             }
         }
 
+        // Update helicopter rotation to match heading when flight mode is enabled
+        if flightMode, let userLocation = uiView.userLocation.location, userLocation.course >= 0 {
+            if let annotationView = uiView.view(for: uiView.userLocation) {
+                let heading = userLocation.course
+                let radians = CGFloat(heading * .pi / 180.0)
+                annotationView.transform = CGAffineTransform(rotationAngle: radians)
+            }
+        }
+
         // Update region when there's a new programmatic region to display
         if let region = cameraPosition.region {
             // CRITICAL FIX: Skip manual region updates when MapKit is controlling the camera
@@ -840,33 +849,13 @@ struct MapRepresentable: UIViewRepresentable {
                     let resizedImage = renderer.image { _ in
                         helicopterImage.draw(in: CGRect(origin: .zero, size: targetSize))
                     }
-
-                    // Get current heading and rotate helicopter to match
-                    if let userLocation = mapView.userLocation.location, userLocation.course >= 0 {
-                        let heading = userLocation.course
-                        // Convert degrees to radians for rotation
-                        let radians = CGFloat(heading * .pi / 180.0)
-
-                        // Create rotated image
-                        let rotatedSize = targetSize
-                        let rotatedRenderer = UIGraphicsImageRenderer(size: rotatedSize)
-                        let rotatedImage = rotatedRenderer.image { context in
-                            // Move origin to center
-                            context.cgContext.translateBy(x: rotatedSize.width / 2, y: rotatedSize.height / 2)
-                            // Rotate
-                            context.cgContext.rotate(by: radians)
-                            // Draw image centered
-                            resizedImage.draw(in: CGRect(x: -targetSize.width / 2, y: -targetSize.height / 2, width: targetSize.width, height: targetSize.height))
-                        }
-                        view?.image = rotatedImage
-                    } else {
-                        // No valid heading, use unrotated image
-                        view?.image = resizedImage
-                    }
+                    view?.image = resizedImage
                 } else {
                     // Fallback to nil if image not found
                     view?.image = nil
                 }
+
+                // Rotation will be handled in updateUIView via transform
 
                 view?.centerOffset = CGPoint(x: 0, y: 0)
                 return view
