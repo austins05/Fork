@@ -351,9 +351,8 @@ struct MapRepresentable: UIViewRepresentable {
 
                 // Handle group pins
                 if subtitle.starts(with: "group_pin_") {
-                    let idString = subtitle.replacingOccurrences(of: "group_pin_", with: "")
-                    if let pinId = Int(idString),
-                       let pin = parent.groupPins.first(where: { $0.id == pinId }) {
+                    let pinId = subtitle.replacingOccurrences(of: "group_pin_", with: "")
+                    if let pin = parent.groupPins.first(where: { $0.id == pinId }) {
                         print("📍 [DOUBLE-TAP] Group pin found, triggering navigation")
                         parent.onGroupPinDoubleTapped?(pin)
                         return
