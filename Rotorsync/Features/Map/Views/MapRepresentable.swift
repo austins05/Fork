@@ -214,6 +214,7 @@ struct MapRepresentable: UIViewRepresentable {
         var last3DCameraHeading: CLLocationDirection = 0
         var camera3DApplied: Bool = false
         var lastOverlayUpdateHash: Int = 0
+        var pendingSingleTapWork: DispatchWorkItem?
 
 
         init(_ parent: MapRepresentable) {
@@ -318,55 +319,41 @@ struct MapRepresentable: UIViewRepresentable {
         }
 
         @objc func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
-            guard gesture.state == .ended else { return }
-            let mv = gesture.view as! MKMapView
-            let pt = gesture.location(in: mv)
-            let coord = mv.convert(pt, toCoordinateFrom: mv)
-
-            print("👆👆 [DOUBLE-TAP] Double tap detected at: \(coord.latitude), \(coord.longitude)")
-
-            // Check if double-tap hit a pin annotation
-            let hitAnnotations = mv.annotations.filter { annotation in
-                guard !(annotation is MKUserLocation) else { return false }
-                let annotationView = mv.view(for: annotation)
-                guard let view = annotationView else { return false }
-                
-                let annotationPoint = mv.convert(annotation.coordinate, toPointTo: mv)
-                let distance = hypot(pt.x - annotationPoint.x, pt.y - annotationPoint.y)
-                return distance < 44 // 44pt is standard tap target size
+            guard gesture.state == .ended,
+                  let annotationView = gesture.view as? MKAnnotationView,
+                  let annotation = annotationView.annotation,
+                  let subtitle = annotation.subtitle as? String else {
+                print("⚠️ [DOUBLE-TAP] Could not get annotation from gesture")
+                return
             }
 
-            // Process the first hit annotation
-            if let hitAnnotation = hitAnnotations.first,
-               let subtitle = hitAnnotation.subtitle as? String {
-                
-                print("🎯 [DOUBLE-TAP] Hit annotation with subtitle: \(subtitle)")
+            // Cancel any pending single-tap action
+            pendingSingleTapWork?.cancel()
+            pendingSingleTapWork = nil
+            print("👆👆 [DOUBLE-TAP] Double tap on annotation: \(subtitle) - cancelled single tap")
 
-                // Handle dropped pins
-                if subtitle.starts(with: "dropped_pin_") {
-                    let idString = subtitle.replacingOccurrences(of: "dropped_pin_", with: "")
-                    if let uuid = UUID(uuidString: idString),
-                       let pin = parent.droppedPins.first(where: { $0.id == uuid }) {
-                        print("📍 [DOUBLE-TAP] Dropped pin found, triggering navigation")
-                        parent.onPinDoubleTapped?(pin)
-                        return
-                    }
+            // Handle dropped pins
+            if subtitle.starts(with: "dropped_pin_") {
+                let idString = subtitle.replacingOccurrences(of: "dropped_pin_", with: "")
+                if let uuid = UUID(uuidString: idString),
+                   let pin = parent.droppedPins.first(where: { $0.id == uuid }) {
+                    print("📍 [DOUBLE-TAP] Dropped pin found, triggering navigation")
+                    parent.onPinDoubleTapped?(pin)
+                    return
                 }
-
-                // Handle group pins
-                if subtitle.starts(with: "group_pin_") {
-                    let pinId = subtitle.replacingOccurrences(of: "group_pin_", with: "")
-                    if let pin = parent.groupPins.first(where: { $0.id == pinId }) {
-                        print("📍 [DOUBLE-TAP] Group pin found, triggering navigation")
-                        parent.onGroupPinDoubleTapped?(pin)
-                        return
-                    }
-                }
-
-                print("⚠️ [DOUBLE-TAP] Annotation hit but not a droppable/group pin")
-            } else {
-                print("ℹ️ [DOUBLE-TAP] No pin annotation hit")
             }
+
+            // Handle group pins
+            if subtitle.starts(with: "group_pin_") {
+                let idString = subtitle.replacingOccurrences(of: "group_pin_", with: "")
+                if let pin = parent.groupPins.first(where: { $0.id == idString }) {
+                    print("📍 [DOUBLE-TAP] Group pin found, triggering navigation")
+                    parent.onGroupPinDoubleTapped?(pin)
+                    return
+                }
+            }
+
+            print("⚠️ [DOUBLE-TAP] Annotation not recognized as pin: \(subtitle)")
         }
 
 
@@ -1189,7 +1176,7 @@ struct MapRepresentable: UIViewRepresentable {
         func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
             guard let ann = view.annotation else { return }
 
-            // Handle waypoint markers
+            // Handle waypoint markers (no delay needed - not affected by double-tap)
             if let subtitle = ann.subtitle as? String, subtitle.starts(with: "waypoint_") {
                 let waypointIndexStr = subtitle.replacingOccurrences(of: "waypoint_", with: "")
                 if let index = Int(waypointIndexStr) {
@@ -1200,26 +1187,41 @@ struct MapRepresentable: UIViewRepresentable {
                 return
             }
 
-            // Handle local pins
-            if let subtitle = ann.subtitle as? String, subtitle.starts(with: "dropped_pin_") {
-                if let title = ann.title as? String,
-                   let pin = parent.droppedPins.first(where: { $0.name == title }) {
-                    parent.onPinTapped(pin)
+            // Cancel any previous pending tap
+            pendingSingleTapWork?.cancel()
+
+            // Delay pin tap actions to allow double-tap to fire
+            let workItem = DispatchWorkItem { [weak self] in
+                guard let self = self else { return }
+
+                // Handle local pins
+                if let subtitle = ann.subtitle as? String, subtitle.starts(with: "dropped_pin_") {
+                    if let title = ann.title as? String,
+                       let pin = self.parent.droppedPins.first(where: { $0.name == title }) {
+                        print("📍 [SINGLE-TAP] Dropped pin action sheet")
+                        self.parent.onPinTapped(pin)
+                    }
+                }
+                // Handle group pins
+                else if let subtitle = ann.subtitle as? String, subtitle.starts(with: "group_pin_") {
+                    if let title = ann.title as? String,
+                       let pin = self.parent.groupPins.first(where: { $0.name == title }) {
+                        print("📍 [SINGLE-TAP] Group pin action sheet")
+                        self.parent.onGroupPinTapped(pin)
+                    }
+                }
+                // Handle devices (no delay needed)
+                else if ann.subtitle == "device",
+                        let title = ann.title as? String,
+                        let dev = self.parent.devices.first(where: { $0.displayName == title }) {
+                    self.parent.onDeviceTapped(dev)
                 }
             }
-            // Handle group pins
-            else if let subtitle = ann.subtitle as? String, subtitle.starts(with: "group_pin_") {
-                if let title = ann.title as? String,
-                   let pin = parent.groupPins.first(where: { $0.name == title }) {
-                    parent.onGroupPinTapped(pin)
-                }
-            }
-            // Handle devices
-            else if ann.subtitle == "device",
-                    let title = ann.title as? String,
-                    let dev = parent.devices.first(where: { $0.displayName == title }) {
-                parent.onDeviceTapped(dev)
-            }
+
+            pendingSingleTapWork = workItem
+            // Wait 0.3 seconds for potential double-tap
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
+
             mapView.deselectAnnotation(ann, animated: true)
         }
 
