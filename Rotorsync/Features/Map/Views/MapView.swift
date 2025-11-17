@@ -255,6 +255,27 @@ struct MapView: View {
                 onAddWaypoint: { coordinate in
                     navigationManager.addWaypoint(coordinate)
                     isAddingWaypoint = false
+                },
+                onPinDoubleTapped: { pin in
+                    // Double-tap on pin: check flight mode
+                    if flightMode {
+                        print("✈️ [DOUBLE-TAP] Flight mode enabled - starting Fly To")
+                        startFlyTo(to: pin.coordinate)
+                    } else {
+                        print("🚗 [DOUBLE-TAP] Normal mode - starting Drive To navigation")
+                        startNavigation(to: pin.coordinate)
+                    }
+                },
+                onGroupPinDoubleTapped: { pin in
+                    let coordinate = CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude)
+                    // Double-tap on group pin: check flight mode
+                    if flightMode {
+                        print("✈️ [DOUBLE-TAP] Flight mode enabled - starting Fly To (group pin)")
+                        startFlyTo(to: coordinate)
+                    } else {
+                        print("🚗 [DOUBLE-TAP] Normal mode - starting Drive To navigation (group pin)")
+                        startNavigation(to: coordinate)
+                    }
                 }
             )
             .ignoresSafeArea()

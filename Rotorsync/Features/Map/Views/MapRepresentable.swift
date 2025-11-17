@@ -42,6 +42,8 @@ struct MapRepresentable: UIViewRepresentable {
     let onRouteTapped: (Int) -> Void
     let onWaypointTapped: (Int) -> Void
     let onAddWaypoint: (CLLocationCoordinate2D) -> Void
+    let onPinDoubleTapped: ((DroppedPinViewModel) -> Void)?
+    let onGroupPinDoubleTapped: ((APIPin) -> Void)?
 
     func makeUIView(context: Context) -> MKMapView {
         let mv = MKMapView()
@@ -310,6 +312,60 @@ struct MapRepresentable: UIViewRepresentable {
                 }
             }
         }
+
+        @objc func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
+            guard gesture.state == .ended else { return }
+            let mv = gesture.view as! MKMapView
+            let pt = gesture.location(in: mv)
+            let coord = mv.convert(pt, toCoordinateFrom: mv)
+
+            print("👆👆 [DOUBLE-TAP] Double tap detected at: \(coord.latitude), \(coord.longitude)")
+
+            // Check if double-tap hit a pin annotation
+            let hitAnnotations = mv.annotations.filter { annotation in
+                guard !(annotation is MKUserLocation) else { return false }
+                let annotationView = mv.view(for: annotation)
+                guard let view = annotationView else { return false }
+                
+                let annotationPoint = mv.convert(annotation.coordinate, toPointTo: mv)
+                let distance = hypot(pt.x - annotationPoint.x, pt.y - annotationPoint.y)
+                return distance < 44 // 44pt is standard tap target size
+            }
+
+            // Process the first hit annotation
+            if let hitAnnotation = hitAnnotations.first,
+               let subtitle = hitAnnotation.subtitle as? String {
+                
+                print("🎯 [DOUBLE-TAP] Hit annotation with subtitle: \(subtitle)")
+
+                // Handle dropped pins
+                if subtitle.starts(with: "dropped_pin_") {
+                    let idString = subtitle.replacingOccurrences(of: "dropped_pin_", with: "")
+                    if let uuid = UUID(uuidString: idString),
+                       let pin = parent.droppedPins.first(where: { $0.id == uuid }) {
+                        print("📍 [DOUBLE-TAP] Dropped pin found, triggering navigation")
+                        parent.onPinDoubleTapped?(pin)
+                        return
+                    }
+                }
+
+                // Handle group pins
+                if subtitle.starts(with: "group_pin_") {
+                    let idString = subtitle.replacingOccurrences(of: "group_pin_", with: "")
+                    if let pinId = Int(idString),
+                       let pin = parent.groupPins.first(where: { $0.id == pinId }) {
+                        print("📍 [DOUBLE-TAP] Group pin found, triggering navigation")
+                        parent.onGroupPinDoubleTapped?(pin)
+                        return
+                    }
+                }
+
+                print("⚠️ [DOUBLE-TAP] Annotation hit but not a droppable/group pin")
+            } else {
+                print("ℹ️ [DOUBLE-TAP] No pin annotation hit")
+            }
+        }
+
 
         // Helper to detect if tap is near a polyline
         private func isTapNearPolyline(tapPoint: CGPoint, polyline: MKPolyline, mapView: MKMapView) -> Bool {
@@ -957,6 +1013,17 @@ struct MapRepresentable: UIViewRepresentable {
                     view?.glyphImage = UIImage(systemName: "mappin")
                     view?.markerTintColor = .systemRed
                 }
+
+                // Add double-tap gesture recognizer for quick navigation
+                if view?.gestureRecognizers?.contains(where: { $0 is UITapGestureRecognizer && ($0 as! UITapGestureRecognizer).numberOfTapsRequired == 2 }) != true {
+                    let doubleTap = UITapGestureRecognizer(
+                        target: self,
+                        action: #selector(Coordinator.handleDoubleTap(_:))
+                    )
+                    doubleTap.numberOfTapsRequired = 2
+                    view?.addGestureRecognizer(doubleTap)
+                }
+                
                 return view
             }
 
@@ -989,6 +1056,16 @@ struct MapRepresentable: UIViewRepresentable {
                 }
                 
                 addGroupBadge(to: view, color: .systemOrange)  // Orange badge on blue
+
+                // Add double-tap gesture recognizer for quick navigation
+                if view?.gestureRecognizers?.contains(where: { $0 is UITapGestureRecognizer && ($0 as! UITapGestureRecognizer).numberOfTapsRequired == 2 }) != true {
+                    let doubleTap = UITapGestureRecognizer(
+                        target: self,
+                        action: #selector(Coordinator.handleDoubleTap(_:))
+                    )
+                    doubleTap.numberOfTapsRequired = 2
+                    view?.addGestureRecognizer(doubleTap)
+                }
                 
                 return view
             }
