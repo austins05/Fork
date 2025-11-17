@@ -207,19 +207,19 @@ struct MapRepresentable: UIViewRepresentable {
         return UIColor(patternImage: image)
     }
 
-    class Coordinator: NSObject, MKMapViewDelegate {
+    class Coordinator: NSObject, MKMapViewDelegate, UIGestureRecognizerDelegate {
         var parent: MapRepresentable
         var isUserInteracting = false
         var last3DCameraAltitude: CLLocationDistance = 0
         var last3DCameraHeading: CLLocationDirection = 0
         var camera3DApplied: Bool = false
         var lastOverlayUpdateHash: Int = 0
-        var pendingSingleTapWork: DispatchWorkItem?
 
 
         init(_ parent: MapRepresentable) {
             self.parent = parent
         }
+
 
         // MARK: - 3D Camera Management
         func update3DNavigationCameraManual(_ mapView: MKMapView, coordinate: CLLocationCoordinate2D, altitude: CLLocationDistance, heading: CLLocationDirection) {
@@ -318,6 +318,41 @@ struct MapRepresentable: UIViewRepresentable {
             }
         }
 
+        @objc func handleSingleTap(_ gesture: UITapGestureRecognizer) {
+            guard gesture.state == .ended,
+                  let annotationView = gesture.view as? MKAnnotationView,
+                  let annotation = annotationView.annotation,
+                  let subtitle = annotation.subtitle as? String else {
+                print("⚠️ [SINGLE-TAP] Could not get annotation from gesture")
+                return
+            }
+
+            print("📍 [SINGLE-TAP] Single tap on annotation: \(subtitle)")
+
+            // Handle dropped pins - show action sheet
+            if subtitle.starts(with: "dropped_pin_") {
+                let idString = subtitle.replacingOccurrences(of: "dropped_pin_", with: "")
+                if let uuid = UUID(uuidString: idString),
+                   let pin = parent.droppedPins.first(where: { $0.id == uuid }) {
+                    print("📍 [SINGLE-TAP] Dropped pin - showing action sheet")
+                    parent.onPinTapped(pin)
+                    return
+                }
+            }
+
+            // Handle group pins - show action sheet
+            if subtitle.starts(with: "group_pin_") {
+                let idString = subtitle.replacingOccurrences(of: "group_pin_", with: "")
+                if let pin = parent.groupPins.first(where: { $0.id == idString }) {
+                    print("📍 [SINGLE-TAP] Group pin - showing action sheet")
+                    parent.onGroupPinTapped(pin)
+                    return
+                }
+            }
+
+            print("⚠️ [SINGLE-TAP] Pin not recognized: \(subtitle)")
+        }
+
         @objc func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
             guard gesture.state == .ended,
                   let annotationView = gesture.view as? MKAnnotationView,
@@ -327,10 +362,7 @@ struct MapRepresentable: UIViewRepresentable {
                 return
             }
 
-            // Cancel any pending single-tap action
-            pendingSingleTapWork?.cancel()
-            pendingSingleTapWork = nil
-            print("👆👆 [DOUBLE-TAP] Double tap on annotation: \(subtitle) - cancelled single tap")
+            print("👆👆 [DOUBLE-TAP] Double tap on annotation: \(subtitle)")
 
             // Handle dropped pins
             if subtitle.starts(with: "dropped_pin_") {
@@ -976,7 +1008,7 @@ struct MapRepresentable: UIViewRepresentable {
                 var view = mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView
                 if view == nil {
                     view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: id)
-                    view?.canShowCallout = true
+                    view?.canShowCallout = false  // Disabled - using custom gestures
                     view?.displayPriority = .required                } else {
                     view?.annotation = annotation
                     view?.subviews.forEach { subview in
@@ -1004,16 +1036,29 @@ struct MapRepresentable: UIViewRepresentable {
                     view?.markerTintColor = .systemRed
                 }
 
-                // Add double-tap gesture recognizer for quick navigation
+                // Add gesture recognizers for quick navigation
                 if view?.gestureRecognizers?.contains(where: { $0 is UITapGestureRecognizer && ($0 as! UITapGestureRecognizer).numberOfTapsRequired == 2 }) != true {
                     let doubleTap = UITapGestureRecognizer(
                         target: self,
                         action: #selector(Coordinator.handleDoubleTap(_:))
                     )
                     doubleTap.numberOfTapsRequired = 2
+                    doubleTap.delegate = self
+
+                    let singleTap = UITapGestureRecognizer(
+                        target: self,
+                        action: #selector(Coordinator.handleSingleTap(_:))
+                    )
+                    singleTap.numberOfTapsRequired = 1
+                    singleTap.delegate = self
+
+                    // CRITICAL: Single-tap must wait for double-tap to fail
+                    singleTap.require(toFail: doubleTap)
+
                     view?.addGestureRecognizer(doubleTap)
+                    view?.addGestureRecognizer(singleTap)
                 }
-                
+
                 return view
             }
 
@@ -1023,7 +1068,7 @@ struct MapRepresentable: UIViewRepresentable {
                 var view = mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView
                 if view == nil {
                     view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: id)
-                    view?.canShowCallout = true
+                    view?.canShowCallout = false  // Disabled - using custom gestures
                     view?.markerTintColor = .systemBlue  // BLUE for group pins
                 } else {
                     view?.annotation = annotation
@@ -1047,16 +1092,29 @@ struct MapRepresentable: UIViewRepresentable {
                 
                 addGroupBadge(to: view, color: .systemOrange)  // Orange badge on blue
 
-                // Add double-tap gesture recognizer for quick navigation
+                // Add gesture recognizers for quick navigation
                 if view?.gestureRecognizers?.contains(where: { $0 is UITapGestureRecognizer && ($0 as! UITapGestureRecognizer).numberOfTapsRequired == 2 }) != true {
                     let doubleTap = UITapGestureRecognizer(
                         target: self,
                         action: #selector(Coordinator.handleDoubleTap(_:))
                     )
                     doubleTap.numberOfTapsRequired = 2
+                    doubleTap.delegate = self
+
+                    let singleTap = UITapGestureRecognizer(
+                        target: self,
+                        action: #selector(Coordinator.handleSingleTap(_:))
+                    )
+                    singleTap.numberOfTapsRequired = 1
+                    singleTap.delegate = self
+
+                    // CRITICAL: Single-tap must wait for double-tap to fail
+                    singleTap.require(toFail: doubleTap)
+
                     view?.addGestureRecognizer(doubleTap)
+                    view?.addGestureRecognizer(singleTap)
                 }
-                
+
                 return view
             }
 
@@ -1176,6 +1234,7 @@ struct MapRepresentable: UIViewRepresentable {
         func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
             guard let ann = view.annotation else { return }
 
+
             // Handle waypoint markers (no delay needed - not affected by double-tap)
             if let subtitle = ann.subtitle as? String, subtitle.starts(with: "waypoint_") {
                 let waypointIndexStr = subtitle.replacingOccurrences(of: "waypoint_", with: "")
@@ -1187,40 +1246,6 @@ struct MapRepresentable: UIViewRepresentable {
                 return
             }
 
-            // Cancel any previous pending tap
-            pendingSingleTapWork?.cancel()
-
-            // Delay pin tap actions to allow double-tap to fire
-            let workItem = DispatchWorkItem { [weak self] in
-                guard let self = self else { return }
-
-                // Handle local pins
-                if let subtitle = ann.subtitle as? String, subtitle.starts(with: "dropped_pin_") {
-                    if let title = ann.title as? String,
-                       let pin = self.parent.droppedPins.first(where: { $0.name == title }) {
-                        print("📍 [SINGLE-TAP] Dropped pin action sheet")
-                        self.parent.onPinTapped(pin)
-                    }
-                }
-                // Handle group pins
-                else if let subtitle = ann.subtitle as? String, subtitle.starts(with: "group_pin_") {
-                    if let title = ann.title as? String,
-                       let pin = self.parent.groupPins.first(where: { $0.name == title }) {
-                        print("📍 [SINGLE-TAP] Group pin action sheet")
-                        self.parent.onGroupPinTapped(pin)
-                    }
-                }
-                // Handle devices (no delay needed)
-                else if ann.subtitle == "device",
-                        let title = ann.title as? String,
-                        let dev = self.parent.devices.first(where: { $0.displayName == title }) {
-                    self.parent.onDeviceTapped(dev)
-                }
-            }
-
-            pendingSingleTapWork = workItem
-            // Wait 0.3 seconds for potential double-tap
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
 
             mapView.deselectAnnotation(ann, animated: true)
         }
