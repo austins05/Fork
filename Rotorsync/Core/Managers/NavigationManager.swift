@@ -829,13 +829,16 @@ class NavigationManager: NSObject, ObservableObject {
             print("🔊 [VOICE SELECTED] Default: \(usVoices.first?.name ?? "none")")
         }
 
-        // Natural speech parameters for more human-like delivery
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 1.1  // 10% faster than default
-        utterance.pitchMultiplier = 1.1  // Slightly higher pitch for friendliness
-        utterance.volume = 1.0  // Full volume for clarity
-        utterance.preUtteranceDelay = 0.2  // Brief pause before speaking
+        // Aggressive parameters to make compact voice sound less robotic
+        // Default rate is 0.5, we'll go faster for more natural flow
+        utterance.rate = 0.57  // Faster = less robotic (range: 0.0-1.0)
+        utterance.pitchMultiplier = 1.15  // Higher pitch = friendlier, less monotone
+        utterance.volume = 0.9  // Slightly reduced volume
+        utterance.preUtteranceDelay = 0.15  // Brief pause
+        utterance.postUtteranceDelay = 0.1  // Brief pause after
 
-        print("🔊 [VOICE PARAMS] Rate: \(utterance.rate), Pitch: \(utterance.pitchMultiplier)")
+        print("🔊 [VOICE PARAMS] Rate: \(utterance.rate), Pitch: \(utterance.pitchMultiplier), Quality: \(utterance.voice?.quality.rawValue ?? 0)")
+        print("🔊 [VOICE] Note: Install premium voices in Settings → Accessibility → Spoken Content → Voices for better quality")
         speechSynthesizer.speak(utterance)
     }
 
