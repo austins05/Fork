@@ -22,11 +22,11 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
     private func setupLocationManager() {
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
-        manager.distanceFilter = 1 // Update every 1 meter
+        manager.distanceFilter = kCLDistanceFilterNone // Update at maximum frequency (~10Hz)
         manager.allowsBackgroundLocationUpdates = true
         manager.pausesLocationUpdatesAutomatically = false
         manager.activityType = .automotiveNavigation
-        
+
         // Critical for background
         manager.showsBackgroundLocationIndicator = true
         

@@ -31,7 +31,6 @@ struct MapRepresentable: UIViewRepresentable {
     @Binding var projection10MinMark: CLLocationCoordinate2D?
     @Binding var projection15MinMark: CLLocationCoordinate2D?
     @Binding var flightMode: Bool
-    @Binding var headingUpMode: Bool
 
     let devices: [Device]
     let onPinTapped: (DroppedPinViewModel) -> Void
@@ -113,28 +112,17 @@ struct MapRepresentable: UIViewRepresentable {
             }
         }
 
-        // Update helicopter rotation to match heading when flight mode is enabled
+        // Update helicopter rotation to match heading when flight mode is enabled (10Hz)
         if let annotationView = uiView.view(for: uiView.userLocation) {
             if flightMode, let userLocation = uiView.userLocation.location, userLocation.course >= 0 {
                 let heading = userLocation.course
                 let radians = CGFloat(heading * .pi / 180.0)
                 annotationView.transform = CGAffineTransform(rotationAngle: radians)
-                print("🚁 [ROTATION] Helicopter rotated to \(heading)°")
+                // Removed debug logging for better performance at 10Hz
             } else {
                 // Reset rotation when flight mode is off
                 annotationView.transform = .identity
             }
-
-        // Heading-Up Mode: Rotate map
-        if headingUpMode, let userLocation = uiView.userLocation.location, userLocation.course >= 0 {
-            let camera = MKMapCamera(lookingAtCenter: userLocation.coordinate, fromEyeCoordinate: userLocation.coordinate, eyeAltitude: uiView.camera.altitude)
-            camera.heading = userLocation.course
-            uiView.setCamera(camera, animated: true)
-        } else if !headingUpMode && uiView.camera.heading != 0 {
-            let camera = uiView.camera.copy() as! MKMapCamera
-            camera.heading = 0
-            uiView.setCamera(camera, animated: true)
-        }
         }
 
         // Update region when there's a new programmatic region to display
@@ -310,8 +298,8 @@ struct MapRepresentable: UIViewRepresentable {
 
         /// Create arrow polylines at endpoint
         private func createArrowLines(at endpoint: CLLocationCoordinate2D, bearing: Double) -> [[CLLocationCoordinate2D]] {
-            let leftArrowPoint = calculateDestination(from: endpoint, bearing: bearing - 135, distance: 100)
-            let rightArrowPoint = calculateDestination(from: endpoint, bearing: bearing + 135, distance: 100)
+            let leftArrowPoint = calculateDestination(from: endpoint, bearing: bearing - 150, distance: 20)
+            let rightArrowPoint = calculateDestination(from: endpoint, bearing: bearing + 150, distance: 20)
 
             return [
                 [leftArrowPoint, endpoint],
@@ -825,7 +813,7 @@ struct MapRepresentable: UIViewRepresentable {
                 // Check if it's a measurement line
                 if polyline.title == "measurement_line" {
                     r.strokeColor = UIColor.systemYellow
-                    r.lineWidth = 8
+                    r.lineWidth = 4
                     r.lineDashPattern = [8, 4] // Dashed line
                     return r
                 }
@@ -842,7 +830,7 @@ struct MapRepresentable: UIViewRepresentable {
                 // Check if it's a flight mode projection ray
                 if polyline.title == "projection_ray_line" {
                     r.strokeColor = UIColor.systemCyan
-                    r.lineWidth = 8
+                    r.lineWidth = 4
                     r.lineDashPattern = [8, 4] // Dashed cyan line
                     r.lineCap = .round
                     r.alpha = 0.8
