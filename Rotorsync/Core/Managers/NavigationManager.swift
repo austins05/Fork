@@ -807,29 +807,36 @@ class NavigationManager: NSObject, ObservableObject {
 
         let utterance = AVSpeechUtterance(string: text)
 
-        // Use premium enhanced voice for more natural, pleasant sound
-        // Try Samantha (high-quality US English) first, fallback to enhanced voice
-        if let samantha = AVSpeechSynthesisVoice(identifier: "com.apple.voice.premium.en-US.Samantha") {
-            utterance.voice = samantha
-            print("🔊 [VOICE] Using Samantha premium voice")
-        } else if let enhanced = AVSpeechSynthesisVoice.speechVoices().first(where: {
-            $0.language.hasPrefix("en-US") && $0.quality == .enhanced
-        }) {
-            utterance.voice = enhanced
-            print("🔊 [VOICE] Using enhanced voice: \(enhanced.name)")
-        } else {
-            // Fallback to default
-            utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
-            print("🔊 [VOICE] Using default voice")
+        // Select highest quality voice available
+        let allVoices = AVSpeechSynthesisVoice.speechVoices()
+        let usVoices = allVoices.filter { $0.language.hasPrefix("en-US") }
+
+        // Debug: Print all available US voices with their quality
+        for voice in usVoices.prefix(5) {
+            print("🔊 [VOICE OPTION] \(voice.name) - Quality: \(voice.quality.rawValue) - ID: \(voice.identifier)")
         }
 
-        utterance.rate = 0.52  // Slightly faster than default for more natural flow
-        utterance.pitchMultiplier = 1.0  // Natural pitch
-        utterance.volume = 0.8  // Slightly softer volume
+        // Select premium quality voice (highest quality available)
+        // Priority: premium > enhanced > default
+        if let premiumVoice = usVoices.first(where: { $0.quality == .premium }) {
+            utterance.voice = premiumVoice
+            print("🔊 [VOICE SELECTED] Premium: \(premiumVoice.name)")
+        } else if let enhancedVoice = usVoices.first(where: { $0.quality == .enhanced }) {
+            utterance.voice = enhancedVoice
+            print("🔊 [VOICE SELECTED] Enhanced: \(enhancedVoice.name)")
+        } else {
+            utterance.voice = usVoices.first
+            print("🔊 [VOICE SELECTED] Default: \(usVoices.first?.name ?? "none")")
+        }
 
-        print("🔊 [VOICE] Starting speech synthesis...")
+        // Natural speech parameters for more human-like delivery
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 1.1  // 10% faster than default
+        utterance.pitchMultiplier = 1.1  // Slightly higher pitch for friendliness
+        utterance.volume = 1.0  // Full volume for clarity
+        utterance.preUtteranceDelay = 0.2  // Brief pause before speaking
+
+        print("🔊 [VOICE PARAMS] Rate: \(utterance.rate), Pitch: \(utterance.pitchMultiplier)")
         speechSynthesizer.speak(utterance)
-        print("🔊 [VOICE] Speech synthesis started")
     }
 
     private func trimRoutePolyline(userLocation: CLLocation) {
