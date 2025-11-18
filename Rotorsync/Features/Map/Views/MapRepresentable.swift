@@ -291,8 +291,8 @@ struct MapRepresentable: UIViewRepresentable {
         /// Create perpendicular tick mark coordinates at a point
         private func createPerpendicularTick(at point: CLLocationCoordinate2D, bearing: Double) -> [CLLocationCoordinate2D] {
             let perpBearing = (bearing + 90).truncatingRemainder(dividingBy: 360)
-            let leftPoint = calculateDestination(from: point, bearing: perpBearing, distance: 7)
-            let rightPoint = calculateDestination(from: point, bearing: perpBearing + 180, distance: 7)
+            let leftPoint = calculateDestination(from: point, bearing: perpBearing, distance: 75)
+            let rightPoint = calculateDestination(from: point, bearing: perpBearing + 180, distance: 75)
             return [leftPoint, rightPoint]
         }
 
@@ -840,9 +840,9 @@ struct MapRepresentable: UIViewRepresentable {
                 // Check if it's a projection tick mark (5 or 10 min)
                 if let title = polyline.title, title.starts(with: "projection_tick_") {
                     r.strokeColor = UIColor.systemCyan
-                    r.lineWidth = 2 // 2px width as specified
+                    r.lineWidth = 5
                     r.lineCap = .round
-                    r.alpha = 0.9
+                    r.alpha = 1.0
                     return r
                 }
 

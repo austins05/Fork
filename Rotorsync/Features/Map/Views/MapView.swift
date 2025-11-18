@@ -77,7 +77,7 @@ struct MapView: View {
     @State private var segmentDistances: [Double] = [] // Distance from each pin to the next
 
     // Navigation
-    @ObservedObject private var navigationManager: NavigationManager
+    @StateObject private var navigationManager: NavigationManager
     @State private var isNavigating = false
     @State private var showRouteSelection = false
     @State private var selectedRouteIndex: Int?
@@ -107,7 +107,7 @@ struct MapView: View {
     init() {
         let locationMgr = LocationManager.shared
         let navMgr = NavigationManager(locationManager: locationMgr)
-        _navigationManager = ObservedObject(wrappedValue: navMgr)
+        _navigationManager = StateObject(wrappedValue: navMgr)
     }
 
     // MARK: - Measurement Functions
