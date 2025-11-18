@@ -87,20 +87,15 @@ struct MapRepresentable: UIViewRepresentable {
             // During navigation, user controls tracking mode with button
         }
 
-        // Update tracking mode
-        // IMPORTANT: Don't use followWithHeading during 3D navigation - it forces pitch to 0
-        if uiView.userTrackingMode != userTrackingMode {
-            // Only set tracking mode if NOT doing 3D navigation
-            if !(isNavigating && userTrackingMode == .followWithHeading) {
-                uiView.userTrackingMode = userTrackingMode
-                print("🗺️ [MAP] Set tracking mode to: \(userTrackingMode.rawValue)")
-            } else {
-                print("📷 [3D] Skipping tracking mode - using custom 3D camera instead")
-            }
-        }
-
-        // Custom 3D camera tracking during navigation
+        // Custom 3D camera tracking during navigation with heading
         if isNavigating && userTrackingMode == .followWithHeading {
+            // CRITICAL: Must disable userTrackingMode for 3D camera to work
+            // userTrackingMode forces pitch to 0, breaking 3D view
+            if uiView.userTrackingMode != .none {
+                uiView.userTrackingMode = .none
+                print("📷 [3D] Disabled tracking mode for 3D camera")
+            }
+
             if let userLocation = uiView.userLocation.location {
                 let heading = userLocation.course >= 0 ? userLocation.course : 0
                 context.coordinator.update3DNavigationCameraManual(
@@ -109,6 +104,12 @@ struct MapRepresentable: UIViewRepresentable {
                     altitude: navigationCameraAltitude,
                     heading: heading
                 )
+            }
+        } else {
+            // Normal tracking mode when NOT in 3D navigation
+            if uiView.userTrackingMode != userTrackingMode {
+                uiView.userTrackingMode = userTrackingMode
+                print("🗺️ [MAP] Set tracking mode to: \(userTrackingMode.rawValue)")
             }
         }
 
