@@ -612,16 +612,20 @@ class NavigationManager: NSObject, ObservableObject {
         let stepLocation = CLLocation(latitude: currentStepCoordinate.latitude, longitude: currentStepCoordinate.longitude)
         distanceToNextStep = location.distance(from: stepLocation)
 
-        print("🔊 [NAV PROGRESS] Step \(currentStepIndex + 1)/\(routeSteps.count), distance to step: \(distanceToNextStep)m (\(distanceToNextStep * 3.28084)ft), speed: \(location.speed)m/s")
+        let stepInstruction = currentStep?.instruction ?? "none"
+        let distanceMiles = distanceToNextStep / 1609.34
+        print("🔊 [NAV PROGRESS] Step \(currentStepIndex + 1)/\(routeSteps.count): '\(stepInstruction)'")
+        print("🔊 [NAV PROGRESS] Distance to maneuver: \(distanceToNextStep)m (\(distanceToNextStep * 3.28084)ft / \(String(format: "%.2f", distanceMiles))mi)")
+        print("🔊 [NAV PROGRESS] Speed: \(location.speed)m/s, Coord: \(currentLocation.latitude), \(currentLocation.longitude)")
 
         // Update remaining route polyline (trim traveled portion)
         trimRoutePolyline(userLocation: location)
 
-        // Check if we should advance to next step (within 50 meters of maneuver start)
-        // Increased from 20m to give better timing for step advancement
-        if distanceToNextStep < 50 {
+        // Check if we should advance to next step (within 20 meters of maneuver point)
+        // Conservative threshold to prevent premature advancement
+        if distanceToNextStep < 20 {
             let nextInstruction = (currentStepIndex + 1 < routeSteps.count) ? routeSteps[currentStepIndex + 1].instruction : "destination"
-            print("⏭️  [STEP ADVANCE] Distance < 50m (\(distanceToNextStep)m), advancing from step \(currentStepIndex + 1) to \(currentStepIndex + 2)")
+            print("⏭️  [STEP ADVANCE] Distance < 20m (\(distanceToNextStep)m), advancing from step \(currentStepIndex + 1) to \(currentStepIndex + 2)")
             print("⏭️  [STEP ADVANCE] Leaving: '\(currentStep?.instruction ?? "")' → Going to: '\(nextInstruction)'")
             advanceToNextStep()
         }
@@ -670,10 +674,13 @@ class NavigationManager: NSObject, ObservableObject {
         let points = step.polyline.points()
         let count = step.polyline.pointCount
 
-        // FIX: Use FIRST coordinate (start of step) instead of last (end of step)
-        // This gives accurate distance to where the maneuver begins
+        // CRITICAL FIX: Use LAST coordinate (end of step/where maneuver happens)
+        // The first coordinate is often where you currently are, causing immediate advancement
+        // The last coordinate is where you actually need to perform the maneuver
         if count > 0 {
-            return points[0].coordinate
+            let maneuverCoord = points[count - 1].coordinate
+            print("📍 [GET COORD] Step \(index): '\(step.instruction)' - Using END of polyline (\(count) points total)")
+            return maneuverCoord
         }
 
         return destination ?? CLLocationCoordinate2D()
