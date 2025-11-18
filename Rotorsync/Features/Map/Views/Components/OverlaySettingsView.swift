@@ -31,6 +31,7 @@ struct OverlaySettingsView: View {
     @Binding var showGroupsButton: Bool
     @Binding var showFilesButton: Bool
     @Binding var showMPZImportButton: Bool
+    @Binding var headingUpMode: Bool
 
     var body: some View {
         ScrollView {
@@ -150,6 +151,17 @@ struct OverlaySettingsView: View {
                     .foregroundColor(.secondary)
                 Spacer()
                 Toggle("", isOn: $shareLocation)
+                    .labelsHidden()
+                    .tint(.blue)
+            }
+            .padding(.horizontal, 20)
+
+            HStack {
+                Text("Heading Up Mode")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Toggle("", isOn: $headingUpMode)
                     .labelsHidden()
                     .tint(.blue)
             }

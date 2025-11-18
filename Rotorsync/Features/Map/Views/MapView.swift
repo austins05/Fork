@@ -28,6 +28,7 @@ struct MapView: View {
     @AppStorage("showFilesButton") private var showFilesButton: Bool = true
     @AppStorage("showMPZImportButton") private var showMPZImportButton: Bool = true
     @AppStorage("flightMode") private var flightMode: Bool = false
+    @AppStorage("headingUpMode") private var headingUpMode: Bool = false
 
     @State private var droppedPins: [DroppedPinViewModel] = []
     @State private var groupPins: [APIPin] = []
@@ -102,7 +103,6 @@ struct MapView: View {
     @State private var projection5MinMark: CLLocationCoordinate2D?
     @State private var projection10MinMark: CLLocationCoordinate2D?
     @State private var projection15MinMark: CLLocationCoordinate2D?
-    @State private var lastProjectionUpdate = Date()
 
     init() {
         let locationMgr = LocationManager.shared
@@ -236,6 +236,7 @@ struct MapView: View {
                 projection10MinMark: $projection10MinMark,
                 projection15MinMark: $projection15MinMark,
                 flightMode: $flightMode,
+                headingUpMode: $headingUpMode,
                 devices: viewModel.devices,
                 onPinTapped: { pin in selectedPinId = pin.id },
                 onGroupPinTapped: { pin in selectedGroupPin = pin },
@@ -811,7 +812,8 @@ struct MapView: View {
                     showMeasureButton: $showMeasureButton,
                     showGroupsButton: $showGroupsButton,
                     showFilesButton: $showFilesButton,
-                    showMPZImportButton: $showMPZImportButton
+                    showMPZImportButton: $showMPZImportButton,
+                    headingUpMode: $headingUpMode
                 )
                 .presentationDetents([.fraction(0.70)])
             }
@@ -1193,9 +1195,6 @@ struct MapView: View {
 
     /// Update flight mode projection ray and time markers based on current heading and speed
     private func updateFlightModeProjection() {
-        // Throttle updates to 3x per second (0.33 seconds)
-        guard Date().timeIntervalSince(lastProjectionUpdate) > 0.33 else { return }
-        lastProjectionUpdate = Date()
         guard let location = locationManager.userLocation, flightMode else {
             // Clear projection if flight mode is off or no location
             projectionRayLine = []
