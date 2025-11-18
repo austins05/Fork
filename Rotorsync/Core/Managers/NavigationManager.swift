@@ -37,6 +37,8 @@ class NavigationManager: NSObject, ObservableObject {
     private let offRouteThreshold: CLLocationDistance = 150 // meters (increased from 50 for less false positives)
     private var consecutiveOffRouteCount = 0
     private var lastRerouteTime: Date?
+    private var lastTrimmedIndex = 0  // Cache for route trimming optimization
+    private var lastTrimTime: Date?  // Throttle route trimming
 
     // Voice announcement distances (in meters)
     private let announcementDistances: [Double] = [804.672, 402.336, 161.3344, 30.48] // 2640ft, 1320ft, 529ft, 100ft
@@ -458,6 +460,8 @@ class NavigationManager: NSObject, ObservableObject {
 
         print("🧭 [NAV START] Prepared \(routeSteps.count) total steps")
         currentStepIndex = 0
+        lastTrimmedIndex = 0  // Reset route trimming cache
+        lastTrimTime = nil  // Reset throttle
         updateCurrentAndNextSteps()
         status = .navigating
         print("🧭 [NAV START] Status set to: navigating")
@@ -495,6 +499,8 @@ class NavigationManager: NSObject, ObservableObject {
         distanceToNextStep = 0
         lastAnnouncedDistance = nil
         consecutiveOffRouteCount = 0
+        lastTrimmedIndex = 0  // Reset trim cache
+        lastTrimTime = nil  // Reset trim throttle
         fullRoutePolyline = nil
         remainingRoutePolyline = nil
         speechSynthesizer.stopSpeaking(at: .immediate)
@@ -882,14 +888,26 @@ class NavigationManager: NSObject, ObservableObject {
     private func trimRoutePolyline(userLocation: CLLocation) {
         guard let fullPolyline = fullRoutePolyline else { return }
 
+        // Throttle trimming: Only update every 2 seconds to prevent performance issues
+        let now = Date()
+        if let lastTrim = lastTrimTime, now.timeIntervalSince(lastTrim) < 2.0 {
+            return  // Skip this update
+        }
+        lastTrimTime = now
+
         let points = fullPolyline.points()
         let count = fullPolyline.pointCount
 
-        // Find closest point on route to user
-        var closestIndex = 0
+        // OPTIMIZATION: Start searching from last known index instead of 0
+        // Users always move forward on route, so closest point only moves forward
+        let searchStartIndex = max(0, lastTrimmedIndex - 5)  // Look back 5 points in case of GPS jitter
+        let searchEndIndex = min(count, lastTrimmedIndex + 50)  // Only search next 50 points
+
+        var closestIndex = lastTrimmedIndex
         var minDistance = CLLocationDistance.greatestFiniteMagnitude
 
-        for i in 0..<count {
+        // Search only a window around last position instead of entire route
+        for i in searchStartIndex..<searchEndIndex {
             let pointCoord = points[i].coordinate
             let pointLocation = CLLocation(latitude: pointCoord.latitude, longitude: pointCoord.longitude)
             let distance = userLocation.distance(from: pointLocation)
@@ -900,6 +918,8 @@ class NavigationManager: NSObject, ObservableObject {
             }
         }
 
+        lastTrimmedIndex = closestIndex  // Cache for next update
+
         // Create new polyline from closest point forward
         if closestIndex < count - 1 {
             var remainingCoords: [CLLocationCoordinate2D] = []
@@ -909,6 +929,7 @@ class NavigationManager: NSObject, ObservableObject {
 
             if !remainingCoords.isEmpty {
                 remainingRoutePolyline = MKPolyline(coordinates: remainingCoords, count: remainingCoords.count)
+                print("🗺️ [TRIM] Updated remaining route: \(remainingCoords.count) points (from index \(closestIndex)/\(count))")
             }
         }
     }
