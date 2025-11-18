@@ -459,12 +459,19 @@ class NavigationManager: NSObject, ObservableObject {
         }
 
         print("🧭 [NAV START] Prepared \(routeSteps.count) total steps")
+
+        // Debug: Print all steps
+        for (index, step) in routeSteps.enumerated() {
+            print("🧭 [STEP \(index)] \(step.instruction) - Distance: \(step.distance)m")
+        }
+
         currentStepIndex = 0
         lastTrimmedIndex = 0  // Reset route trimming cache
         lastTrimTime = nil  // Reset throttle
         updateCurrentAndNextSteps()
         status = .navigating
         print("🧭 [NAV START] Status set to: navigating")
+        print("🧭 [NAV START] First instruction: \(currentStep?.instruction ?? "none")")
 
         // Configure audio session for voice guidance
         do {
@@ -584,10 +591,17 @@ class NavigationManager: NSObject, ObservableObject {
             return
         }
 
-        // Don't update if user is stationary or barely moving (< 0.5 m/s or ~1 mph)
+        // Don't update if user is stationary or barely moving (< 1.0 m/s or ~2 mph)
         // This prevents false announcements when GPS jitters while parked
-        if location.speed >= 0 && location.speed < 0.5 {
+        // Note: speed < 0 means invalid, so we check for valid speed that's too slow
+        if location.speed >= 0 && location.speed < 1.0 {
             print("🔊 [NAV PROGRESS] Skipping update - user stationary/slow (speed: \(location.speed) m/s)")
+            return
+        }
+
+        // Also skip if speed is invalid
+        if location.speed < 0 {
+            print("🔊 [NAV PROGRESS] Skipping update - invalid speed data (\(location.speed))")
             return
         }
 
@@ -606,6 +620,9 @@ class NavigationManager: NSObject, ObservableObject {
         // Check if we should advance to next step (within 50 meters of maneuver start)
         // Increased from 20m to give better timing for step advancement
         if distanceToNextStep < 50 {
+            let nextInstruction = (currentStepIndex + 1 < routeSteps.count) ? routeSteps[currentStepIndex + 1].instruction : "destination"
+            print("⏭️  [STEP ADVANCE] Distance < 50m (\(distanceToNextStep)m), advancing from step \(currentStepIndex + 1) to \(currentStepIndex + 2)")
+            print("⏭️  [STEP ADVANCE] Leaving: '\(currentStep?.instruction ?? "")' → Going to: '\(nextInstruction)'")
             advanceToNextStep()
         }
 
@@ -663,14 +680,19 @@ class NavigationManager: NSObject, ObservableObject {
     }
 
     private func advanceToNextStep() {
+        print("⏭️  [ADVANCE] Advancing from step \(currentStepIndex) to \(currentStepIndex + 1)")
         currentStepIndex += 1
         updateCurrentAndNextSteps()
         lastAnnouncedDistance = nil // Reset for next step
+        print("⏭️  [ADVANCE] New current step: '\(currentStep?.instruction ?? "none")'")
 
         if let instruction = currentStep?.instruction, !instruction.isEmpty {
+            print("⏭️  [ADVANCE] Speaking new step instruction: '\(instruction)'")
             if voiceGuidanceEnabled {
                 speak(instruction)
             }
+        } else {
+            print("⏭️  [ADVANCE] No instruction to speak for new step")
         }
     }
 
