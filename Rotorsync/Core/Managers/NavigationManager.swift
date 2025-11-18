@@ -656,11 +656,18 @@ class NavigationManager: NSObject, ObservableObject {
             print("⚠️ [NAV PROGRESS] Voice guidance disabled - skipping announcement")
         }
 
-        // Check if arrived
+        // Check if arrived at final destination
         if let dest = destination {
             let destLocation = CLLocation(latitude: dest.latitude, longitude: dest.longitude)
-            if location.distance(from: destLocation) < 30 { // Within 30 meters
-                arriveAtDestination()
+            let distanceToDestination = location.distance(from: destLocation)
+
+            // Only check for arrival if on the last step
+            if currentStepIndex >= routeSteps.count - 1 {
+                print("🎯 [ARRIVAL CHECK] On final step, distance to destination: \(distanceToDestination)m")
+                if distanceToDestination < 30 { // Within 30 meters (~100 ft)
+                    print("🎯 [ARRIVED] Within 30m of destination!")
+                    arriveAtDestination()
+                }
             }
         }
     }
