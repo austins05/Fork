@@ -39,6 +39,8 @@ class NavigationManager: NSObject, ObservableObject {
     private var lastRerouteTime: Date?
     private var lastTrimmedIndex = 0  // Cache for route trimming optimization
     private var lastTrimTime: Date?  // Throttle route trimming
+    private var lastProgressLogTime: Date?  // Throttle progress logging
+    private var selectedVoice: AVSpeechSynthesisVoice?  // Cache selected voice
 
     // Voice announcement distances (in meters)
     private let announcementDistances: [Double] = [804.672, 402.336, 161.3344, 30.48] // 2640ft, 1320ft, 529ft, 100ft
@@ -508,6 +510,7 @@ class NavigationManager: NSObject, ObservableObject {
         consecutiveOffRouteCount = 0
         lastTrimmedIndex = 0  // Reset trim cache
         lastTrimTime = nil  // Reset trim throttle
+        lastProgressLogTime = nil  // Reset progress log throttle
         fullRoutePolyline = nil
         remainingRoutePolyline = nil
         speechSynthesizer.stopSpeaking(at: .immediate)
@@ -612,11 +615,16 @@ class NavigationManager: NSObject, ObservableObject {
         let stepLocation = CLLocation(latitude: currentStepCoordinate.latitude, longitude: currentStepCoordinate.longitude)
         distanceToNextStep = location.distance(from: stepLocation)
 
-        let stepInstruction = currentStep?.instruction ?? "none"
-        let distanceMiles = distanceToNextStep / 1609.34
-        print("🔊 [NAV PROGRESS] Step \(currentStepIndex + 1)/\(routeSteps.count): '\(stepInstruction)'")
-        print("🔊 [NAV PROGRESS] Distance to maneuver: \(distanceToNextStep)m (\(distanceToNextStep * 3.28084)ft / \(String(format: "%.2f", distanceMiles))mi)")
-        print("🔊 [NAV PROGRESS] Speed: \(location.speed)m/s, Coord: \(currentLocation.latitude), \(currentLocation.longitude)")
+        // Throttle logging to every 2 seconds to avoid console spam at 10Hz
+        let now = Date()
+        if lastProgressLogTime == nil || now.timeIntervalSince(lastProgressLogTime!) > 2.0 {
+            let stepInstruction = currentStep?.instruction ?? "none"
+            let distanceMiles = distanceToNextStep / 1609.34
+            print("🔊 [NAV PROGRESS] Step \(currentStepIndex + 1)/\(routeSteps.count): '\(stepInstruction)'")
+            print("🔊 [NAV PROGRESS] Distance: \(distanceToNextStep)m (\(Int(distanceToNextStep * 3.28084))ft / \(String(format: "%.2f", distanceMiles))mi)")
+            print("🔊 [NAV PROGRESS] Speed: \(location.speed)m/s")
+            lastProgressLogTime = now
+        }
 
         // Update remaining route polyline (trim traveled portion)
         trimRoutePolyline(userLocation: location)
@@ -686,7 +694,7 @@ class NavigationManager: NSObject, ObservableObject {
         // The last coordinate is where you actually need to perform the maneuver
         if count > 0 {
             let maneuverCoord = points[count - 1].coordinate
-            print("📍 [GET COORD] Step \(index): '\(step.instruction)' - Using END of polyline (\(count) points total)")
+            // Removed verbose logging here (called at 10Hz)
             return maneuverCoord
         }
 
@@ -797,134 +805,84 @@ class NavigationManager: NSObject, ObservableObject {
     }
 
     private func announceIfNeeded(distanceToStep distance: Double) {
-        print("📢 [ANNOUNCE DEBUG] ========================================")
-        print("📢 [ANNOUNCE DEBUG] Called with distance: \(distance)m (\(distance * 3.28084)ft)")
-        let stepText = currentStep?.instruction ?? "nil"
-        print("📢 [ANNOUNCE DEBUG] Current step: \(stepText)")
-        let lastDistText = lastAnnouncedDistance?.description ?? "nil"
-        print("📢 [ANNOUNCE DEBUG] Last announced distance: \(lastDistText)")
-        print("📢 [ANNOUNCE DEBUG] Announcement thresholds: \(announcementDistances)")
+        // Reduced verbose logging for performance at 10Hz updates
 
         // Sanity check: Don't announce if distance is unreasonably far (> 1 mile = 1609m)
-        // This prevents incorrect announcements from GPS errors or wrong calculations
         if distance > 1609 {
-            print("📢 [ANNOUNCE DEBUG] Distance too far (\(distance)m) - skipping announcement")
-            print("📢 [ANNOUNCE DEBUG] ========================================")
             return
         }
 
-        // CRITICAL FIX: If this is the first check (lastAnnouncedDistance is nil),
-        // initialize it to current distance instead of announcing immediately.
-        // This prevents "turn in 308 ft" when you're 1.5 miles away and haven't moved yet.
+        // CRITICAL FIX: Initialize lastAnnouncedDistance on first check instead of announcing
+        // This prevents premature announcements when navigation starts
         if lastAnnouncedDistance == nil {
             lastAnnouncedDistance = distance
-            print("📢 [ANNOUNCE DEBUG] First check - initializing lastAnnouncedDistance to \(distance)m")
-            print("📢 [ANNOUNCE DEBUG] Will announce when user crosses thresholds while moving")
-            print("📢 [ANNOUNCE DEBUG] ========================================")
+            print("📢 [ANNOUNCE] First check - baseline distance: \(Int(distance))m")
             return
         }
 
-        print("📢 [ANNOUNCE DEBUG] ========================================")
-
+        // Check each threshold for crossing (from far to near)
         for threshold in announcementDistances {
-            // Only announce when crossing threshold (from far to near)
             let shouldAnnounce = lastAnnouncedDistance! > threshold && distance <= threshold
-            print("📢 [ANNOUNCE DEBUG] Threshold \(threshold)m: lastDist=\(lastAnnouncedDistance!), currDist=\(distance), shouldAnnounce=\(shouldAnnounce)")
 
             if shouldAnnounce {
-                print("🔊 [VOICE] Threshold crossed: \(threshold)m")
                 if let instruction = currentStep?.instruction {
                     let distanceInFeet = Int(distance * 3.28084)
                     let announcement = "In \(distanceInFeet) feet, \(instruction)"
-                    print("🔊 [VOICE] Speaking: \(announcement)")
+                    print("🔊 [ANNOUNCE] \(threshold)m threshold: \(announcement)")
                     speak(announcement)
                     lastAnnouncedDistance = distance
-                } else {
-                    print("⚠️ [VOICE] No instruction available")
                 }
                 return
             }
         }
 
-        // Update last distance even if no announcement (for next comparison)
+        // Update last distance for next comparison
         if distance < lastAnnouncedDistance! {
             lastAnnouncedDistance = distance
-            print("📢 [ANNOUNCE DEBUG] Updated lastAnnouncedDistance to \(distance)m (getting closer)")
         }
-
-        print("🔊 [VOICE] No threshold crossed")
     }
 
     private func speak(_ text: String) {
-        print("🔊 [VOICE DEBUG] ========================================")
-        print("🔊 [VOICE DEBUG] speak() called with: \(text)")
-        print("🔊 [VOICE DEBUG] voiceGuidanceEnabled: \(voiceGuidanceEnabled)")
-        print("🔊 [VOICE DEBUG] Synthesizer speaking: \(speechSynthesizer.isSpeaking)")
-        
-        // Check audio session status
-        let session = AVAudioSession.sharedInstance()
-        print("🔊 [VOICE DEBUG] Audio session category: \(session.category.rawValue)")
-        print("🔊 [VOICE DEBUG] Audio session active: \(session.isOtherAudioPlaying)")
-        print("🔊 [VOICE DEBUG] ========================================")
-
-        guard voiceGuidanceEnabled else {
-            print("⚠️ [VOICE] Voice guidance disabled - not speaking")
-            return
-        }
+        guard voiceGuidanceEnabled else { return }
 
         speechSynthesizer.stopSpeaking(at: .immediate)
-
         let utterance = AVSpeechUtterance(string: text)
 
-        // Select highest quality voice available - check ALL English variants
-        let allVoices = AVSpeechSynthesisVoice.speechVoices()
-        let englishVoices = allVoices.filter { $0.language.hasPrefix("en") }
+        // Select and cache voice (only once per session for performance)
+        if selectedVoice == nil {
+            let allVoices = AVSpeechSynthesisVoice.speechVoices()
+            let englishVoices = allVoices.filter { $0.language.hasPrefix("en") }
 
-        // Debug: Print ALL available English voices with their quality
-        print("🔊 [VOICE DEBUG] === ALL ENGLISH VOICES ===")
-        for voice in englishVoices {
-            print("🔊 [VOICE OPTION] \(voice.name) - Quality: \(voice.quality.rawValue) - Lang: \(voice.language) - ID: \(voice.identifier)")
+            // Select best available: premium > enhanced > default
+            if let premiumVoice = englishVoices.first(where: { $0.quality == .premium }) {
+                selectedVoice = premiumVoice
+                print("🔊 [VOICE] Selected premium: \(premiumVoice.name)")
+            } else if let enhancedVoice = englishVoices.first(where: { $0.quality == .enhanced }) {
+                selectedVoice = enhancedVoice
+                print("🔊 [VOICE] Selected enhanced: \(enhancedVoice.name)")
+            } else {
+                selectedVoice = englishVoices.first
+                print("🔊 [VOICE] Selected default: \(englishVoices.first?.name ?? "system")")
+            }
         }
-        print("🔊 [VOICE DEBUG] =============================")
 
-        // Look for premium voices
-        let premiumVoices = englishVoices.filter { $0.quality == .premium }
-        print("🔊 [VOICE DEBUG] Found \(premiumVoices.count) premium voices")
-        for voice in premiumVoices {
-            print("🔊 [PREMIUM] \(voice.name) - Lang: \(voice.language) - \(voice.identifier)")
-        }
+        utterance.voice = selectedVoice
 
-        // Select premium quality voice (highest quality available)
-        // Priority: any premium voice > enhanced > US default
-        if let premiumVoice = englishVoices.first(where: { $0.quality == .premium }) {
-            utterance.voice = premiumVoice
-            print("🔊 [VOICE SELECTED] ✅ PREMIUM: \(premiumVoice.name) (\(premiumVoice.language))")
-        } else if let enhancedVoice = englishVoices.first(where: { $0.quality == .enhanced }) {
-            utterance.voice = enhancedVoice
-            print("🔊 [VOICE SELECTED] Enhanced: \(enhancedVoice.name) (\(enhancedVoice.language))")
+        // Optimize speech parameters based on voice quality
+        if selectedVoice?.quality == .premium {
+            utterance.rate = 0.52
+            utterance.pitchMultiplier = 1.0
+            utterance.volume = 1.0
         } else {
-            let usVoices = englishVoices.filter { $0.language.hasPrefix("en-US") }
-            utterance.voice = usVoices.first
-            print("🔊 [VOICE SELECTED] Default: \(usVoices.first?.name ?? "none")")
-        }
-
-        // Natural speech parameters optimized for premium voices
-        if utterance.voice?.quality == .premium {
-            // Premium voices sound best at slightly slower rates with natural pitch
-            utterance.rate = 0.52  // Slightly faster than default (0.5) for conversation flow
-            utterance.pitchMultiplier = 1.0  // Natural pitch - premium voices already sound good
-            utterance.volume = 1.0  // Full volume
-        } else {
-            // Compact/enhanced voices need more adjustments to sound less robotic
-            utterance.rate = 0.58  // Faster = less robotic
-            utterance.pitchMultiplier = 1.15  // Higher pitch for friendlier sound
+            utterance.rate = 0.58
+            utterance.pitchMultiplier = 1.15
             utterance.volume = 0.9
         }
 
         utterance.preUtteranceDelay = 0.1
         utterance.postUtteranceDelay = 0.05
 
-        print("🔊 [VOICE PARAMS] Rate: \(utterance.rate), Pitch: \(utterance.pitchMultiplier), Quality: \(utterance.voice?.quality.rawValue ?? 0)")
+        print("🔊 [VOICE] Speaking: \"\(text)\"")
         speechSynthesizer.speak(utterance)
     }
 
