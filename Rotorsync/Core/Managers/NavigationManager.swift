@@ -817,8 +817,11 @@ class NavigationManager: NSObject, ObservableObject {
         }
 
         // Select premium quality voice (highest quality available)
-        // Priority: premium > enhanced > default
-        if let premiumVoice = usVoices.first(where: { $0.quality == .premium }) {
+        // Priority: Jamie premium > any premium > enhanced > default
+        if let jamieVoice = usVoices.first(where: { $0.name.contains("Jamie") && $0.quality == .premium }) {
+            utterance.voice = jamieVoice
+            print("🔊 [VOICE SELECTED] Jamie Premium: \(jamieVoice.name)")
+        } else if let premiumVoice = usVoices.first(where: { $0.quality == .premium }) {
             utterance.voice = premiumVoice
             print("🔊 [VOICE SELECTED] Premium: \(premiumVoice.name)")
         } else if let enhancedVoice = usVoices.first(where: { $0.quality == .enhanced }) {
@@ -829,16 +832,23 @@ class NavigationManager: NSObject, ObservableObject {
             print("🔊 [VOICE SELECTED] Default: \(usVoices.first?.name ?? "none")")
         }
 
-        // Aggressive parameters to make compact voice sound less robotic
-        // Default rate is 0.5, we'll go faster for more natural flow
-        utterance.rate = 0.57  // Faster = less robotic (range: 0.0-1.0)
-        utterance.pitchMultiplier = 1.15  // Higher pitch = friendlier, less monotone
-        utterance.volume = 0.9  // Slightly reduced volume
-        utterance.preUtteranceDelay = 0.15  // Brief pause
-        utterance.postUtteranceDelay = 0.1  // Brief pause after
+        // Natural speech parameters optimized for premium voices
+        if utterance.voice?.quality == .premium {
+            // Premium voices sound best at slightly slower rates with natural pitch
+            utterance.rate = 0.52  // Slightly faster than default (0.5) for conversation flow
+            utterance.pitchMultiplier = 1.0  // Natural pitch - premium voices already sound good
+            utterance.volume = 1.0  // Full volume
+        } else {
+            // Compact/enhanced voices need more adjustments to sound less robotic
+            utterance.rate = 0.58  // Faster = less robotic
+            utterance.pitchMultiplier = 1.15  // Higher pitch for friendlier sound
+            utterance.volume = 0.9
+        }
+
+        utterance.preUtteranceDelay = 0.1
+        utterance.postUtteranceDelay = 0.05
 
         print("🔊 [VOICE PARAMS] Rate: \(utterance.rate), Pitch: \(utterance.pitchMultiplier), Quality: \(utterance.voice?.quality.rawValue ?? 0)")
-        print("🔊 [VOICE] Note: Install premium voices in Settings → Accessibility → Spoken Content → Voices for better quality")
         speechSynthesizer.speak(utterance)
     }
 
