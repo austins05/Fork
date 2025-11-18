@@ -806,8 +806,26 @@ class NavigationManager: NSObject, ObservableObject {
         speechSynthesizer.stopSpeaking(at: .immediate)
 
         let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
-        utterance.rate = 0.5
+
+        // Use premium enhanced voice for more natural, pleasant sound
+        // Try Samantha (high-quality US English) first, fallback to enhanced voice
+        if let samantha = AVSpeechSynthesisVoice(identifier: "com.apple.voice.premium.en-US.Samantha") {
+            utterance.voice = samantha
+            print("🔊 [VOICE] Using Samantha premium voice")
+        } else if let enhanced = AVSpeechSynthesisVoice.speechVoices().first(where: {
+            $0.language.hasPrefix("en-US") && $0.quality == .enhanced
+        }) {
+            utterance.voice = enhanced
+            print("🔊 [VOICE] Using enhanced voice: \(enhanced.name)")
+        } else {
+            // Fallback to default
+            utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+            print("🔊 [VOICE] Using default voice")
+        }
+
+        utterance.rate = 0.52  // Slightly faster than default for more natural flow
+        utterance.pitchMultiplier = 1.0  // Natural pitch
+        utterance.volume = 0.8  // Slightly softer volume
 
         print("🔊 [VOICE] Starting speech synthesis...")
         speechSynthesizer.speak(utterance)
