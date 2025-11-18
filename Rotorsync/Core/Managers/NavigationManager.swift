@@ -578,6 +578,13 @@ class NavigationManager: NSObject, ObservableObject {
             return
         }
 
+        // Don't update if user is stationary or barely moving (< 0.5 m/s or ~1 mph)
+        // This prevents false announcements when GPS jitters while parked
+        if location.speed >= 0 && location.speed < 0.5 {
+            print("🔊 [NAV PROGRESS] Skipping update - user stationary/slow (speed: \(location.speed) m/s)")
+            return
+        }
+
         let currentLocation = location.coordinate
         let currentStepCoordinate = getStepCoordinate(at: currentStepIndex)
 
@@ -585,7 +592,7 @@ class NavigationManager: NSObject, ObservableObject {
         let stepLocation = CLLocation(latitude: currentStepCoordinate.latitude, longitude: currentStepCoordinate.longitude)
         distanceToNextStep = location.distance(from: stepLocation)
 
-        print("🔊 [NAV PROGRESS] Step \(currentStepIndex + 1)/\(routeSteps.count), distance to step: \(distanceToNextStep)m (\(distanceToNextStep * 3.28084)ft)")
+        print("🔊 [NAV PROGRESS] Step \(currentStepIndex + 1)/\(routeSteps.count), distance to step: \(distanceToNextStep)m (\(distanceToNextStep * 3.28084)ft), speed: \(location.speed)m/s")
 
         // Update remaining route polyline (trim traveled portion)
         trimRoutePolyline(userLocation: location)
@@ -755,17 +762,30 @@ class NavigationManager: NSObject, ObservableObject {
         let lastDistText = lastAnnouncedDistance?.description ?? "nil"
         print("📢 [ANNOUNCE DEBUG] Last announced distance: \(lastDistText)")
         print("📢 [ANNOUNCE DEBUG] Announcement thresholds: \(announcementDistances)")
+
+        // Sanity check: Don't announce if distance is unreasonably far (> 1 mile = 1609m)
+        // This prevents incorrect announcements from GPS errors or wrong calculations
+        if distance > 1609 {
+            print("📢 [ANNOUNCE DEBUG] Distance too far (\(distance)m) - skipping announcement")
+            print("📢 [ANNOUNCE DEBUG] ========================================")
+            return
+        }
+
         print("📢 [ANNOUNCE DEBUG] ========================================")
 
         for threshold in announcementDistances {
             // Check if we crossed this threshold since last announcement
             let shouldAnnounce: Bool
             if let lastDist = lastAnnouncedDistance {
+                // Normal case: announce when crossing threshold (from far to near)
                 shouldAnnounce = lastDist > threshold && distance <= threshold
                 print("📢 [ANNOUNCE DEBUG] Threshold \(threshold)m: lastDist=\(lastDist), shouldAnnounce=\(shouldAnnounce)")
             } else {
-                shouldAnnounce = distance <= threshold
-                print("📢 [ANNOUNCE DEBUG] Threshold \(threshold)m: no lastDist, shouldAnnounce=\(shouldAnnounce)")
+                // First announcement for this step: ONLY announce the largest threshold or smaller
+                // This prevents announcing "in 250 ft turn right" when you're 1.5 miles away
+                let largestThreshold = announcementDistances.max() ?? 804.672
+                shouldAnnounce = distance <= threshold && distance <= largestThreshold
+                print("📢 [ANNOUNCE DEBUG] Threshold \(threshold)m: first announcement, within largest? \(distance <= largestThreshold), shouldAnnounce=\(shouldAnnounce)")
             }
 
             if shouldAnnounce {
@@ -807,27 +827,34 @@ class NavigationManager: NSObject, ObservableObject {
 
         let utterance = AVSpeechUtterance(string: text)
 
-        // Select highest quality voice available
+        // Select highest quality voice available - check ALL English variants
         let allVoices = AVSpeechSynthesisVoice.speechVoices()
-        let usVoices = allVoices.filter { $0.language.hasPrefix("en-US") }
+        let englishVoices = allVoices.filter { $0.language.hasPrefix("en") }
 
-        // Debug: Print all available US voices with their quality
-        for voice in usVoices.prefix(5) {
-            print("🔊 [VOICE OPTION] \(voice.name) - Quality: \(voice.quality.rawValue) - ID: \(voice.identifier)")
+        // Debug: Print ALL available English voices with their quality
+        print("🔊 [VOICE DEBUG] === ALL ENGLISH VOICES ===")
+        for voice in englishVoices {
+            print("🔊 [VOICE OPTION] \(voice.name) - Quality: \(voice.quality.rawValue) - Lang: \(voice.language) - ID: \(voice.identifier)")
+        }
+        print("🔊 [VOICE DEBUG] =============================")
+
+        // Look for premium voices
+        let premiumVoices = englishVoices.filter { $0.quality == .premium }
+        print("🔊 [VOICE DEBUG] Found \(premiumVoices.count) premium voices")
+        for voice in premiumVoices {
+            print("🔊 [PREMIUM] \(voice.name) - Lang: \(voice.language) - \(voice.identifier)")
         }
 
         // Select premium quality voice (highest quality available)
-        // Priority: Jamie premium > any premium > enhanced > default
-        if let jamieVoice = usVoices.first(where: { $0.name.contains("Jamie") && $0.quality == .premium }) {
-            utterance.voice = jamieVoice
-            print("🔊 [VOICE SELECTED] Jamie Premium: \(jamieVoice.name)")
-        } else if let premiumVoice = usVoices.first(where: { $0.quality == .premium }) {
+        // Priority: any premium voice > enhanced > US default
+        if let premiumVoice = englishVoices.first(where: { $0.quality == .premium }) {
             utterance.voice = premiumVoice
-            print("🔊 [VOICE SELECTED] Premium: \(premiumVoice.name)")
-        } else if let enhancedVoice = usVoices.first(where: { $0.quality == .enhanced }) {
+            print("🔊 [VOICE SELECTED] ✅ PREMIUM: \(premiumVoice.name) (\(premiumVoice.language))")
+        } else if let enhancedVoice = englishVoices.first(where: { $0.quality == .enhanced }) {
             utterance.voice = enhancedVoice
-            print("🔊 [VOICE SELECTED] Enhanced: \(enhancedVoice.name)")
+            print("🔊 [VOICE SELECTED] Enhanced: \(enhancedVoice.name) (\(enhancedVoice.language))")
         } else {
+            let usVoices = englishVoices.filter { $0.language.hasPrefix("en-US") }
             utterance.voice = usVoices.first
             print("🔊 [VOICE SELECTED] Default: \(usVoices.first?.name ?? "none")")
         }
