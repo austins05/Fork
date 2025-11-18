@@ -777,22 +777,23 @@ class NavigationManager: NSObject, ObservableObject {
             return
         }
 
+        // CRITICAL FIX: If this is the first check (lastAnnouncedDistance is nil),
+        // initialize it to current distance instead of announcing immediately.
+        // This prevents "turn in 308 ft" when you're 1.5 miles away and haven't moved yet.
+        if lastAnnouncedDistance == nil {
+            lastAnnouncedDistance = distance
+            print("📢 [ANNOUNCE DEBUG] First check - initializing lastAnnouncedDistance to \(distance)m")
+            print("📢 [ANNOUNCE DEBUG] Will announce when user crosses thresholds while moving")
+            print("📢 [ANNOUNCE DEBUG] ========================================")
+            return
+        }
+
         print("📢 [ANNOUNCE DEBUG] ========================================")
 
         for threshold in announcementDistances {
-            // Check if we crossed this threshold since last announcement
-            let shouldAnnounce: Bool
-            if let lastDist = lastAnnouncedDistance {
-                // Normal case: announce when crossing threshold (from far to near)
-                shouldAnnounce = lastDist > threshold && distance <= threshold
-                print("📢 [ANNOUNCE DEBUG] Threshold \(threshold)m: lastDist=\(lastDist), shouldAnnounce=\(shouldAnnounce)")
-            } else {
-                // First announcement for this step: ONLY announce the largest threshold or smaller
-                // This prevents announcing "in 250 ft turn right" when you're 1.5 miles away
-                let largestThreshold = announcementDistances.max() ?? 804.672
-                shouldAnnounce = distance <= threshold && distance <= largestThreshold
-                print("📢 [ANNOUNCE DEBUG] Threshold \(threshold)m: first announcement, within largest? \(distance <= largestThreshold), shouldAnnounce=\(shouldAnnounce)")
-            }
+            // Only announce when crossing threshold (from far to near)
+            let shouldAnnounce = lastAnnouncedDistance! > threshold && distance <= threshold
+            print("📢 [ANNOUNCE DEBUG] Threshold \(threshold)m: lastDist=\(lastAnnouncedDistance!), currDist=\(distance), shouldAnnounce=\(shouldAnnounce)")
 
             if shouldAnnounce {
                 print("🔊 [VOICE] Threshold crossed: \(threshold)m")
@@ -807,6 +808,12 @@ class NavigationManager: NSObject, ObservableObject {
                 }
                 return
             }
+        }
+
+        // Update last distance even if no announcement (for next comparison)
+        if distance < lastAnnouncedDistance! {
+            lastAnnouncedDistance = distance
+            print("📢 [ANNOUNCE DEBUG] Updated lastAnnouncedDistance to \(distance)m (getting closer)")
         }
 
         print("🔊 [VOICE] No threshold crossed")
