@@ -224,35 +224,26 @@ struct MapRepresentable: UIViewRepresentable {
 
         // MARK: - 3D Camera Management
         func update3DNavigationCameraManual(_ mapView: MKMapView, coordinate: CLLocationCoordinate2D, altitude: CLLocationDistance, heading: CLLocationDirection) {
-            // Only update if values changed significantly
-            let altitudeChanged = abs(altitude - last3DCameraAltitude) > 100
-            let headingChanged = abs(heading - last3DCameraHeading) > 10
-
-            if !camera3DApplied || altitudeChanged || headingChanged {
-                print("📷 [3D CAMERA] Updating 3D camera - altitude: \(altitude)m, heading: \(heading)°")
-
-                // Ensure map type supports 3D
-                if mapView.mapType == .satellite || mapView.mapType == .hybrid {
-                    print("📷 [3D CAMERA] Switching to standard map type")
-                    mapView.mapType = .standard
-                }
-
-                // Create 3D camera manually (NOT using tracking mode)
-                let camera = MKMapCamera(
-                    lookingAtCenter: coordinate,
-                    fromDistance: altitude,
-                    pitch: 50.0,
-                    heading: heading
-                )
-
-                print("📷 [3D CAMERA] Applying camera - center: \(coordinate.latitude), pitch: 50°")
-                mapView.setCamera(camera, animated: camera3DApplied) // Animate after first
-                print("📷 [3D CAMERA] Result - pitch: \(mapView.camera.pitch)°")
-
-                last3DCameraAltitude = altitude
-                last3DCameraHeading = heading
-                camera3DApplied = true
+            // Verify pitch is enabled
+            if !mapView.isPitchEnabled {
+                print("📷 [3D CAMERA] ERROR: Pitch not enabled on mapView")
+                return
             }
+
+            // Create 3D camera using Apple's recommended approach
+            let camera = MKMapCamera(
+                lookingAtCenter: coordinate,
+                fromDistance: altitude,
+                pitch: 50.0,
+                heading: heading
+            )
+
+            // Apply camera without animation for smooth 10Hz tracking
+            mapView.setCamera(camera, animated: false)
+
+            last3DCameraAltitude = altitude
+            last3DCameraHeading = heading
+            camera3DApplied = true
         }
 
         // MARK: - Flight Mode Projection Helpers
@@ -986,9 +977,14 @@ struct MapRepresentable: UIViewRepresentable {
                 self.parent.mapCenter = mapView.centerCoordinate
             }
 
-            // Note: We do NOT automatically reset isUserInteracting here
-            // This prevents unwanted auto-centering after user moves the map
-            // isUserInteracting will only be reset when shouldForceUpdate is triggered
+            // During navigation, auto-reset interaction flag after 2 seconds
+            // This allows continuous auto-centering and camera updates
+            if parent.isNavigating {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                    self?.isUserInteracting = false
+                    print("🗺️ [AUTO-RESET] isUserInteracting reset for navigation")
+                }
+            }
 
             // Check if zoomed in enough to show field details
             let region = mapView.region
