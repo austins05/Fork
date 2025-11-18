@@ -1033,8 +1033,8 @@ struct MapRepresentable: UIViewRepresentable {
 
                 // Use R44 helicopter image from assets
                 if let helicopterImage = UIImage(named: "r44_helicopter") {
-                    // Resize image to appropriate size for map marker
-                    let targetSize = CGSize(width: 40, height: 40)
+                    // Resize image to appropriate size for map marker (increased by 30%)
+                    let targetSize = CGSize(width: 52, height: 52)
                     let renderer = UIGraphicsImageRenderer(size: targetSize)
                     let resizedImage = renderer.image { _ in
                         helicopterImage.draw(in: CGRect(origin: .zero, size: targetSize))
