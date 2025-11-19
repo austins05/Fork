@@ -2,6 +2,21 @@ import SwiftUI
 import MapKit
 import CoreLocation
 
+
+// Custom mutable annotation for TCP GPS that allows coordinate updates
+class MutablePointAnnotation: NSObject, MKAnnotation {
+    dynamic var coordinate: CLLocationCoordinate2D
+    var title: String?
+    var subtitle: String?
+    
+    init(coordinate: CLLocationCoordinate2D, title: String? = nil, subtitle: String? = nil) {
+        self.coordinate = coordinate
+        self.title = title
+        self.subtitle = subtitle
+        super.init()
+    }
+}
+
 struct MapRepresentable: UIViewRepresentable {
     @Binding var cameraPosition: MapCameraPosition
     @Binding var droppedPins: [DroppedPinViewModel]
@@ -31,6 +46,8 @@ struct MapRepresentable: UIViewRepresentable {
     @Binding var projection10MinMark: CLLocationCoordinate2D?
     @Binding var projection15MinMark: CLLocationCoordinate2D?
     @Binding var flightMode: Bool
+    @Binding var usingTCPGPS: Bool
+    @Binding var tcpUserLocation: CLLocation?
 
     let devices: [Device]
     let onPinTapped: (DroppedPinViewModel) -> Void
@@ -48,7 +65,8 @@ struct MapRepresentable: UIViewRepresentable {
     func makeUIView(context: Context) -> MKMapView {
         let mv = MKMapView()
         mv.delegate = context.coordinator
-        mv.showsUserLocation = true
+        // Only show internal GPS location when NOT using TCP GPS
+        mv.showsUserLocation = !usingTCPGPS
         mv.mapType = mapStyle.mapType
         mv.userTrackingMode = userTrackingMode
 
@@ -96,7 +114,10 @@ struct MapRepresentable: UIViewRepresentable {
                 print("📷 [3D] Disabled tracking mode for 3D camera")
             }
 
-            if let userLocation = uiView.userLocation.location {
+            // Use TCP GPS location if available, otherwise fall back to internal GPS
+            let locationToUse: CLLocation? = usingTCPGPS ? tcpUserLocation : uiView.userLocation.location
+
+            if let userLocation = locationToUse {
                 let heading = userLocation.course >= 0 ? userLocation.course : 0
                 context.coordinator.update3DNavigationCameraManual(
                     uiView,
@@ -114,15 +135,36 @@ struct MapRepresentable: UIViewRepresentable {
         }
 
         // Update helicopter rotation to match heading when flight mode is enabled (10Hz)
-        if let annotationView = uiView.view(for: uiView.userLocation) {
-            if flightMode, let userLocation = uiView.userLocation.location, userLocation.course >= 0 {
-                let heading = userLocation.course
-                let radians = CGFloat(heading * .pi / 180.0)
-                annotationView.transform = CGAffineTransform(rotationAngle: radians)
-                // Removed debug logging for better performance at 10Hz
-            } else {
-                // Reset rotation when flight mode is off
-                annotationView.transform = .identity
+        // Handle both internal GPS (MKUserLocation) and TCP GPS (custom annotation)
+        if usingTCPGPS {
+            // TCP GPS: Find and rotate the tcp_gps_location annotation
+            if let tcpLocation = tcpUserLocation {
+                let tcpAnnotations = uiView.annotations.filter { 
+                    ($0.subtitle as? String) == "tcp_gps_location" 
+                }
+                if let tcpAnnotation = tcpAnnotations.first,
+                   let annotationView = uiView.view(for: tcpAnnotation) {
+                    if flightMode, tcpLocation.course >= 0 {
+                        let heading = tcpLocation.course
+                        let radians = CGFloat(heading * .pi / 180.0)
+                        annotationView.transform = CGAffineTransform(rotationAngle: radians)
+                    } else {
+                        annotationView.transform = .identity
+                    }
+                }
+            }
+        } else {
+            // Internal GPS: Rotate the MKUserLocation annotation
+            if let annotationView = uiView.view(for: uiView.userLocation) {
+                if flightMode, let userLocation = uiView.userLocation.location, userLocation.course >= 0 {
+                    let heading = userLocation.course
+                    let radians = CGFloat(heading * .pi / 180.0)
+                    annotationView.transform = CGAffineTransform(rotationAngle: radians)
+                    // Removed debug logging for better performance at 10Hz
+                } else {
+                    // Reset rotation when flight mode is off
+                    annotationView.transform = .identity
+                }
             }
         }
 
@@ -172,6 +214,12 @@ struct MapRepresentable: UIViewRepresentable {
             }
         }
         
+        // Update showsUserLocation based on GPS source
+        let shouldShowInternalGPS = !usingTCPGPS
+        if uiView.showsUserLocation != shouldShowInternalGPS {
+            uiView.showsUserLocation = shouldShowInternalGPS
+        }
+        
         // Update annotations and overlays
         context.coordinator.updateAnnotations(uiView, parent: self)
     }
@@ -215,6 +263,7 @@ struct MapRepresentable: UIViewRepresentable {
         var last3DCameraHeading: CLLocationDirection = 0
         var camera3DApplied: Bool = false
         var lastOverlayUpdateHash: Int = 0
+        var tcpGPSAnnotation: MutablePointAnnotation?
 
 
         init(_ parent: MapRepresentable) {
@@ -460,13 +509,47 @@ struct MapRepresentable: UIViewRepresentable {
         }
         
         func updateAnnotations(_ mapView: MKMapView, parent: MapRepresentable) {
+// Update TCP GPS annotation - use mutable annotation to avoid recreating
+            if parent.usingTCPGPS, let tcpLocation = parent.tcpUserLocation {
+                if let existingAnnotation = tcpGPSAnnotation {
+                    // Update coordinate in place - no removal/recreation needed!
+                    existingAnnotation.coordinate = tcpLocation.coordinate
+                } else {
+                    // Create new mutable annotation
+                    let annotation = MutablePointAnnotation(
+                        coordinate: tcpLocation.coordinate,
+                        title: "GPS Location",
+                        subtitle: "tcp_gps_location"
+                    )
+                    tcpGPSAnnotation = annotation
+                    mapView.addAnnotation(annotation)
+                }
+            } else {
+                // Remove TCP GPS annotation if no longer using TCP GPS
+                if let annotation = tcpGPSAnnotation {
+                    mapView.removeAnnotation(annotation)
+                    tcpGPSAnnotation = nil
+                }
+}
             // Only update if pins/devices actually changed
-            let currentAnnotations = mapView.annotations.filter { !($0 is MKUserLocation) }
-            let projectionMarkersCount = [parent.projection5MinMark, parent.projection10MinMark, parent.projection15MinMark].compactMap { $0 }.count
-            let expectedCount = parent.droppedPins.count + parent.groupPins.count + parent.devices.count + parent.measurementPins.count + parent.waypoints.count + projectionMarkersCount
+            let currentAnnotations = mapView.annotations.filter {
+                !($0 is MKUserLocation) &&
+                !($0 is MutablePointAnnotation)  // Exclude TCP GPS annotation
+            }
+            // NOTE: Projection markers are overlays, not annotations - don't count them
+            // NOTE: Only count devices that have coordinates (some may not)
+            let devicesWithCoordinates = parent.devices.filter { $0.latitude != nil && $0.longitude != nil }.count
+            let expectedCount = parent.droppedPins.count + parent.groupPins.count + devicesWithCoordinates + parent.measurementPins.count + parent.waypoints.count
+
+            print("📍 [ANNOTATIONS] Current count: \(currentAnnotations.count), Expected: \(expectedCount)")
+            print("📍 [ANNOTATIONS] Breakdown - Pins:\(parent.droppedPins.count) GroupPins:\(parent.groupPins.count) Devices:\(devicesWithCoordinates) Measurement:\(parent.measurementPins.count) Waypoints:\(parent.waypoints.count)")
 
             // Only refresh annotations if count changed
             if currentAnnotations.count != expectedCount {
+                print("⚠️ [ANNOTATIONS] Count mismatch! Recreating all annotations")
+                mapView.removeAnnotations(currentAnnotations)
+                print("⚠️ [ANNOTATIONS] Count mismatch! Recreating all annotations")
+                mapView.removeAnnotations(currentAnnotations)
                 mapView.removeAnnotations(currentAnnotations)
                 
                 // Add local pins
@@ -1048,6 +1131,52 @@ struct MapRepresentable: UIViewRepresentable {
                 return view
             }
 
+            // Handle TCP GPS location annotation
+            if let subtitle = annotation.subtitle as? String, subtitle == "tcp_gps_location" {
+                let id = "tcpGPSLocation"
+                
+                // Show same style as user location based on flight mode
+                if !parent.flightMode {
+                    // Blue dot for normal mode
+                    var view = mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView
+                    if view == nil {
+                        view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: id)
+                    } else {
+                        view?.annotation = annotation
+                    }
+                    
+                    view?.markerTintColor = .systemBlue
+                    view?.glyphImage = nil
+                    view?.glyphText = ""
+                    view?.displayPriority = .required
+                    
+                    return view
+                } else {
+                    // Helicopter icon for flight mode
+                    var view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
+                    if view == nil {
+                        view = MKAnnotationView(annotation: annotation, reuseIdentifier: id)
+                    } else {
+                        view?.annotation = annotation
+                    }
+
+                    if let helicopterImage = UIImage(named: "r44_helicopter") {
+                        let targetSize = CGSize(width: 64, height: 64)
+                        let renderer = UIGraphicsImageRenderer(size: targetSize)
+                        let resizedImage = renderer.image { _ in
+                            helicopterImage.draw(in: CGRect(origin: .zero, size: targetSize))
+                        }
+                        view?.image = resizedImage
+                    } else {
+                        view?.image = nil
+                    }
+
+                    // Rotation will be handled in updateUIView if needed
+                    view?.centerOffset = CGPoint(x: 0, y: 0)
+                    return view
+                }
+            }
+
             // Handle flight mode projection time markers - CYAN
             if let subtitle = annotation.subtitle as? String, subtitle.starts(with: "projection_") {
                 let id = "projectionMarker"
@@ -1113,118 +1242,105 @@ struct MapRepresentable: UIViewRepresentable {
 
             // Handle local dropped pins - RED for personal, BLUE for shared
             if let subtitle = annotation.subtitle as? String, subtitle.starts(with: "dropped_pin_") {
-                let id = "droppedPin"
-                var view = mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView
-                if view == nil {
-                    view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: id)
-                    view?.canShowCallout = false  // Disabled - using custom gestures
-                    view?.displayPriority = .required                } else {
-                    view?.annotation = annotation
-                    view?.subviews.forEach { subview in
-                        if subview.tag == 999 {
-                            subview.removeFromSuperview()
-                        }
-                    }
-                }
-
                 let coord = annotation.coordinate
                 if let pin = parent.droppedPins.first(where: {
                     abs($0.coordinate.latitude - coord.latitude) < 0.00001 &&
                     abs($0.coordinate.longitude - coord.longitude) < 0.00001
                 }) {
-                    view?.glyphImage = UIImage(systemName: pin.iconName)
-                    
-                    if pin.isShared {
-                        view?.markerTintColor = .systemBlue  // BLUE for shared
-                        addGroupBadge(to: view, color: .systemOrange)  // Orange badge on blue
+                    // Use unique identifier for each pin to prevent reuse issues
+                    let id = "droppedPin_\(pin.id.uuidString)"
+                    var view = mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView
+
+                    if view == nil {
+                        // Create new view - configure ONCE
+                        view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: id)
+                        view?.canShowCallout = false  // Disabled - using custom gestures
+                        view?.displayPriority = .required
+                        view?.glyphImage = UIImage(systemName: pin.iconName)
+
+                        if pin.isShared {
+                            view?.markerTintColor = .systemBlue  // BLUE for shared
+                            addGroupBadge(to: view, color: .systemOrange)  // Orange badge on blue
+                        } else {
+                            view?.markerTintColor = .systemRed  // RED for personal
+                        }
+
+                        // Add gesture recognizers ONCE
+                        let doubleTap = UITapGestureRecognizer(
+                            target: self,
+                            action: #selector(Coordinator.handleDoubleTap(_:))
+                        )
+                        doubleTap.numberOfTapsRequired = 2
+                        doubleTap.delegate = self
+
+                        let singleTap = UITapGestureRecognizer(
+                            target: self,
+                            action: #selector(Coordinator.handleSingleTap(_:))
+                        )
+                        singleTap.numberOfTapsRequired = 1
+                        singleTap.delegate = self
+
+                        // CRITICAL: Single-tap must wait for double-tap to fail
+                        singleTap.require(toFail: doubleTap)
+
+                        view?.addGestureRecognizer(doubleTap)
+                        view?.addGestureRecognizer(singleTap)
                     } else {
-                        view?.markerTintColor = .systemRed  // RED for personal
+                        // Reusing view - only update annotation
+                        view?.annotation = annotation
                     }
-                } else {
-                    view?.glyphImage = UIImage(systemName: "mappin")
-                    view?.markerTintColor = .systemRed
+
+                    return view
                 }
-
-                // Add gesture recognizers for quick navigation
-                if view?.gestureRecognizers?.contains(where: { $0 is UITapGestureRecognizer && ($0 as! UITapGestureRecognizer).numberOfTapsRequired == 2 }) != true {
-                    let doubleTap = UITapGestureRecognizer(
-                        target: self,
-                        action: #selector(Coordinator.handleDoubleTap(_:))
-                    )
-                    doubleTap.numberOfTapsRequired = 2
-                    doubleTap.delegate = self
-
-                    let singleTap = UITapGestureRecognizer(
-                        target: self,
-                        action: #selector(Coordinator.handleSingleTap(_:))
-                    )
-                    singleTap.numberOfTapsRequired = 1
-                    singleTap.delegate = self
-
-                    // CRITICAL: Single-tap must wait for double-tap to fail
-                    singleTap.require(toFail: doubleTap)
-
-                    view?.addGestureRecognizer(doubleTap)
-                    view?.addGestureRecognizer(singleTap)
-                }
-
-                return view
             }
 
             // Handle group pins - BLUE for shared
             if let subtitle = annotation.subtitle as? String, subtitle.starts(with: "group_pin_") {
-                let id = "groupPin"
-                var view = mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView
-                if view == nil {
-                    view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: id)
-                    view?.canShowCallout = false  // Disabled - using custom gestures
-                    view?.markerTintColor = .systemBlue  // BLUE for group pins
-                } else {
-                    view?.annotation = annotation
-                    view?.markerTintColor = .systemBlue
-                    view?.subviews.forEach { subview in
-                        if subview.tag == 999 {
-                            subview.removeFromSuperview()
-                        }
-                    }
-                }
-
                 let coord = annotation.coordinate
                 if let pin = parent.groupPins.first(where: {
                     abs($0.latitude - coord.latitude) < 0.00001 &&
                     abs($0.longitude - coord.longitude) < 0.00001
                 }) {
-                    view?.glyphImage = UIImage(systemName: pin.iconName)
-                } else {
-                    view?.glyphImage = UIImage(systemName: "mappin")
+                    // Use unique identifier for each group pin to prevent reuse issues
+                    let id = "groupPin_\(pin.id)"
+                    var view = mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView
+
+                    if view == nil {
+                        // Create new view - configure ONCE
+                        view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: id)
+                        view?.canShowCallout = false  // Disabled - using custom gestures
+                        view?.markerTintColor = .systemBlue  // BLUE for group pins
+                        view?.glyphImage = UIImage(systemName: pin.iconName)
+
+                        addGroupBadge(to: view, color: .systemOrange)  // Orange badge on blue
+
+                        // Add gesture recognizers ONCE
+                        let doubleTap = UITapGestureRecognizer(
+                            target: self,
+                            action: #selector(Coordinator.handleDoubleTap(_:))
+                        )
+                        doubleTap.numberOfTapsRequired = 2
+                        doubleTap.delegate = self
+
+                        let singleTap = UITapGestureRecognizer(
+                            target: self,
+                            action: #selector(Coordinator.handleSingleTap(_:))
+                        )
+                        singleTap.numberOfTapsRequired = 1
+                        singleTap.delegate = self
+
+                        // CRITICAL: Single-tap must wait for double-tap to fail
+                        singleTap.require(toFail: doubleTap)
+
+                        view?.addGestureRecognizer(doubleTap)
+                        view?.addGestureRecognizer(singleTap)
+                    } else {
+                        // Reusing view - only update annotation
+                        view?.annotation = annotation
+                    }
+
+                    return view
                 }
-                
-                addGroupBadge(to: view, color: .systemOrange)  // Orange badge on blue
-
-                // Add gesture recognizers for quick navigation
-                if view?.gestureRecognizers?.contains(where: { $0 is UITapGestureRecognizer && ($0 as! UITapGestureRecognizer).numberOfTapsRequired == 2 }) != true {
-                    let doubleTap = UITapGestureRecognizer(
-                        target: self,
-                        action: #selector(Coordinator.handleDoubleTap(_:))
-                    )
-                    doubleTap.numberOfTapsRequired = 2
-                    doubleTap.delegate = self
-
-                    let singleTap = UITapGestureRecognizer(
-                        target: self,
-                        action: #selector(Coordinator.handleSingleTap(_:))
-                    )
-                    singleTap.numberOfTapsRequired = 1
-                    singleTap.delegate = self
-
-                    // CRITICAL: Single-tap must wait for double-tap to fail
-                    singleTap.require(toFail: doubleTap)
-
-                    view?.addGestureRecognizer(doubleTap)
-                    view?.addGestureRecognizer(singleTap)
-                }
-
-                return view
             }
 
             // Handle imported field pins - use field color

@@ -236,6 +236,8 @@ struct MapView: View {
                 projection10MinMark: $projection10MinMark,
                 projection15MinMark: $projection15MinMark,
                 flightMode: $flightMode,
+                usingTCPGPS: $locationManager.gpsSettings.tcpEnabled,
+                tcpUserLocation: $locationManager.userLocation,
                 devices: viewModel.devices,
                 onPinTapped: { pin in selectedPinId = pin.id },
                 onGroupPinTapped: { pin in selectedGroupPin = pin },

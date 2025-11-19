@@ -3,10 +3,31 @@ import SwiftUI
 struct SettingsView: View {
     @State private var navigationSettings = NavigationSettings.load()
     @AppStorage("flightMode") private var flightMode: Bool = false
+    @StateObject private var locationManager = LocationManager.shared
 
     var body: some View {
         NavigationStack {
             Form {
+                // GPS Settings Section
+                Section {
+                    NavigationLink(destination: GPSSettingsView()) {
+                        HStack {
+                            Image(systemName: "location.circle.fill")
+                                .foregroundColor(.blue)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("GPS Settings")
+                                Text(locationManager.sourceString)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Location")
+                } footer: {
+                    Text("Configure GPS source: use internal GPS or connect to an external TCP GPS over WiFi.")
+                }
+
                 Section {
                     Toggle("Avoid Highways", isOn: $navigationSettings.avoidHighways)
                         .onChange(of: navigationSettings.avoidHighways) { oldValue, newValue in
@@ -39,7 +60,7 @@ struct SettingsView: View {
                     HStack {
                         Text("Version")
                         Spacer()
-                        Text("1.0 (25)")
+                        Text("1.0 - v35_NO_UTURN_SENSITIVE")
                             .foregroundColor(.secondary)
                     }
 
