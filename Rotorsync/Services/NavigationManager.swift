@@ -12,7 +12,7 @@ import AVFoundation
 
 class NavigationManager: NSObject, ObservableObject {
     // MARK: - Version
-    private let VERSION = "v35_NO_UTURN_SENSITIVE"
+    private let VERSION = "v55_HIDE_WAYPOINT_ARRIVALS_FROM_UI"
 
     // MARK: - Published Properties
     @Published var status: NavigationStatus = .idle
@@ -37,9 +37,10 @@ class NavigationManager: NSObject, ObservableObject {
     var destination: CLLocationCoordinate2D? // Made public for recalculation
     private let speechSynthesizer = AVSpeechSynthesizer()
     private var lastAnnouncedDistance: Double?
-    private let offRouteThreshold: CLLocationDistance = 500 // meters (increased from 50 for less false positives)
+    private let offRouteThreshold: CLLocationDistance = 800 // meters - VERY large buffer for rural GPS drift and road mismatch
     private var consecutiveOffRouteCount = 0
     private var lastRerouteTime: Date?
+    private var suppressNextAnnouncement = false // Suppress announcement right after reroute
     private var lastTrimmedIndex = 0  // Cache for route trimming optimization
     private var lastTrimTime: Date?  // Throttle route trimming
     private var lastProgressLogTime: Date?  // Throttle progress logging
@@ -320,11 +321,18 @@ class NavigationManager: NSObject, ObservableObject {
     }
 
     // Fix #1: Remove infinite recursion - add retryCount parameter with guard
-    private func calculateSegmentedRoute(from origin: CLLocationCoordinate2D, waypoints: [CLLocationCoordinate2D], to destination: CLLocationCoordinate2D, retryCount: Int = 0) {
+    private func calculateSegmentedRoute(from origin: CLLocationCoordinate2D, waypoints: [CLLocationCoordinate2D], to destination: CLLocationCoordinate2D, retryCount: Int = 0, fallbackToStandard: Bool = true) {
         // Guard against infinite recursion
         guard retryCount < 3 else {
-            print("❌ [WAYPOINT ROUTING] Max retry attempts reached (\(retryCount))")
-            status = .error("Failed to calculate route after \(retryCount) attempts")
+            log("❌ [WAYPOINT ROUTING] Max retry attempts reached (\(retryCount))")
+
+            // Fallback to standard routing (allows U-turns)
+            if fallbackToStandard {
+                log("🔄 [FALLBACK] Waypoint routing failed, falling back to standard routing")
+                calculateStandardReroute(to: destination)
+            } else {
+                status = .error("Failed to calculate route after \(retryCount) attempts")
+            }
             return
         }
         
@@ -384,18 +392,23 @@ class NavigationManager: NSObject, ObservableObject {
 
             // Fix #2: Handle failed segments with retry logic
             if !failedSegments.isEmpty {
-                print("❌ [WAYPOINT ROUTING] Failed segments: \(failedSegments.count)/\(coordinates.count - 1)")
-                
-                // If all segments failed, show error
+                log("❌ [WAYPOINT ROUTING] Failed segments: \(failedSegments.count)/\(coordinates.count - 1)")
+
+                // If all segments failed, fall back to standard routing
                 if failedSegments.count == coordinates.count - 1 {
-                    self.status = .error("Route calculation failed for all segments")
+                    if fallbackToStandard {
+                        log("🔄 [FALLBACK] All waypoint segments failed, falling back to standard routing")
+                        self.calculateStandardReroute(to: destination)
+                    } else {
+                        self.status = .error("Route calculation failed for all segments")
+                    }
                     return
                 }
-                
+
                 // Retry with delay (Fix #1: increment retry counter)
-                print("🔄 [WAYPOINT ROUTING] Retrying in 1 second (attempt \(retryCount + 2)/3)")
+                log("🔄 [WAYPOINT ROUTING] Retrying in 1 second (attempt \(retryCount + 2)/3)")
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    self.calculateSegmentedRoute(from: origin, waypoints: waypoints, to: destination, retryCount: retryCount + 1)
+                    self.calculateSegmentedRoute(from: origin, waypoints: waypoints, to: destination, retryCount: retryCount + 1, fallbackToStandard: fallbackToStandard)
                 }
                 return
             }
@@ -549,6 +562,9 @@ class NavigationManager: NSObject, ObservableObject {
                 // Reroute announcement - don't say "navigation started" again
                 speak("Route recalculated. \(route.distanceString) remaining.")
                 log("🔄 [REROUTE ANNOUNCE] Said 'Route recalculated' (not 'Navigation started')")
+                // Suppress the next turn announcement to avoid repeating immediately
+                suppressNextAnnouncement = true
+                log("🔇 [SUPPRESS] Next turn announcement will be suppressed to avoid repetition")
             } else {
                 // Initial navigation start
                 speak("Navigation started. \(route.distanceString) to destination.")
@@ -589,6 +605,7 @@ class NavigationManager: NSObject, ObservableObject {
     private func setupLocationTracking() {
         locationManager.$userLocation
             .compactMap { $0 }
+            .throttle(for: .seconds(0.5), scheduler: DispatchQueue.main, latest: true)  // Limit to max 2 updates/sec
             .receive(on: DispatchQueue.main)
             .sink { [weak self] location in
                 self?.updateNavigationProgress(with: location)
@@ -611,31 +628,33 @@ class NavigationManager: NSObject, ObservableObject {
     }
 
     private func prepareStepsFromSegments(_ segments: [MKRoute], totalDistance: Double, totalTime: TimeInterval) {
-        print("🧭 [NAV START] Combining steps from \(segments.count) segments")
+        log("🧭 [SEGMENT STEPS] Combining steps from \(segments.count) segments")
 
         // Combine all steps from all segments
         var allSteps: [NavigationStep] = []
 
         for (segmentIndex, segment) in segments.enumerated() {
-            print("🧭 [NAV START] Segment \(segmentIndex + 1) has \(segment.steps.count) steps")
+            log("🧭 [SEGMENT STEPS] Segment \(segmentIndex + 1) has \(segment.steps.count) steps")
 
-            let segmentSteps = segment.steps.map { step in
-                NavigationStep(
+            for (stepIndex, step) in segment.steps.enumerated() {
+                let navStep = NavigationStep(
                     instruction: step.instructions,
                     distance: step.distance,
                     polyline: step.polyline,
                     notice: step.notice
                 )
-            }
 
-            allSteps.append(contentsOf: segmentSteps)
+                log("🧭 [SEGMENT STEPS] Seg \(segmentIndex + 1), Step \(stepIndex + 1): '\(step.instructions)' - \(step.distance)m")
+                allSteps.append(navStep)
+            }
         }
 
         routeSteps = allSteps
         remainingDistance = totalDistance
         remainingTime = totalTime
 
-        print("🧭 [NAV START] Total combined steps: \(allSteps.count)")
+        log("🧭 [SEGMENT STEPS] Total combined steps: \(allSteps.count)")
+        log("🧭 [SEGMENT STEPS] First step instruction: '\(allSteps.first?.instruction ?? "NONE")'")
     }
 
     private func updateCurrentAndNextSteps() {
@@ -647,10 +666,25 @@ class NavigationManager: NSObject, ObservableObject {
 
         currentStep = routeSteps[currentStepIndex]
 
-        if currentStepIndex + 1 < routeSteps.count {
-            nextStep = routeSteps[currentStepIndex + 1]
-        } else {
-            nextStep = nil
+        // Find next MEANINGFUL step (skip waypoint arrivals)
+        // Waypoints should be invisible to the user - only show real turns
+        var nextStepIndex = currentStepIndex + 1
+        nextStep = nil
+
+        while nextStepIndex < routeSteps.count {
+            let candidateStep = routeSteps[nextStepIndex]
+            let lowercased = candidateStep.instruction.lowercased()
+            let isWaypointArrival = (lowercased.contains("destination") || lowercased.contains("arrive"))
+                                    && nextStepIndex < routeSteps.count - 1  // Not the final step
+
+            if !isWaypointArrival {
+                // Found a meaningful step (real turn, not waypoint arrival)
+                nextStep = candidateStep
+                break
+            }
+
+            // Skip this waypoint arrival and check next step
+            nextStepIndex += 1
         }
     }
 
@@ -702,16 +736,54 @@ class NavigationManager: NSObject, ObservableObject {
         // Update remaining route polyline (trim traveled portion)
         trimRoutePolyline(userLocation: location)
 
-        // Check if we should advance to next step (within 20 meters of maneuver point)
-        // Conservative threshold to prevent premature advancement
+        // SMART STEP ADVANCEMENT - Detect when user has actually made the turn
+        // Multiple conditions to handle various GPS accuracy scenarios
         var justAdvanced = false
+        var shouldAdvance = false
+        var advanceReason = ""
+
+        // Condition 1: Very close to turn point (< 20m) - Original logic
         if distanceToNextStep < 20 {
+            shouldAdvance = true
+            advanceReason = "Within 20m of turn point"
+        }
+
+        // Condition 2: User passed the turn point - distance started increasing after approaching
+        // This catches turns that were made slightly early or where GPS accuracy prevented getting <20m
+        else if hasApproachedTurn && lastDistanceToNextStep > 0 {
+            let distanceIncrease = distanceToNextStep - lastDistanceToNextStep
+            // If distance increased by >10m after being <100m from turn, user passed it
+            if distanceIncrease > 10 && lastDistanceToNextStep < 100 {
+                shouldAdvance = true
+                advanceReason = "Passed turn point (was \(Int(lastDistanceToNextStep))m, now \(Int(distanceToNextStep))m)"
+            }
+        }
+
+        // Condition 3: Check if user is now closer to NEXT step than current step
+        // This handles cases where they made the turn but GPS didn't register proximity
+        if !shouldAdvance && currentStepIndex + 1 < routeSteps.count {
+            let nextStepCoord = getStepCoordinate(at: currentStepIndex + 1)
+            let nextStepLocation = CLLocation(latitude: nextStepCoord.latitude, longitude: nextStepCoord.longitude)
+            let distanceToNextNextStep = location.distance(from: nextStepLocation)
+
+            // If closer to next step than current step, and we approached current step, advance
+            if distanceToNextNextStep < distanceToNextStep && hasApproachedTurn && distanceToNextStep > 50 {
+                shouldAdvance = true
+                advanceReason = "Closer to next step (\(Int(distanceToNextNextStep))m) than current (\(Int(distanceToNextStep))m)"
+            }
+        }
+
+        if shouldAdvance {
             let nextInstruction = (currentStepIndex + 1 < routeSteps.count) ? routeSteps[currentStepIndex + 1].instruction : "destination"
-            log("⏭️  [STEP ADVANCE] Distance < 20m (\(distanceToNextStep)m), advancing from step \(currentStepIndex + 1) to \(currentStepIndex + 2)")
+            log("⏭️  [STEP ADVANCE] \(advanceReason)")
+            log("⏭️  [STEP ADVANCE] Advancing from step \(currentStepIndex + 1) to \(currentStepIndex + 2)")
             log("⏭️  [STEP ADVANCE] Leaving: '\(currentStep?.instruction ?? "")' → Going to: '\(nextInstruction)'")
             advanceToNextStep()
             justAdvanced = true
         }
+
+        // Track distance for next iteration
+        lastDistanceToNextStep = distanceToNextStep
 
         // Update remaining distance and time
         updateRemainingStats(from: location)
@@ -737,19 +809,23 @@ class NavigationManager: NSObject, ObservableObject {
         } else {
             log("⏸️  [MISSED TURN SKIP] Skipping detection - just advanced to new step (distance data is stale)")
         }
-                // Check if off route
-        if isOffRoute(location: location) {
-            consecutiveOffRouteCount += 1
-            log("⚠️ [OFF ROUTE] Off route detected - count: \(consecutiveOffRouteCount)/5")
-            if consecutiveOffRouteCount >= 5 { // 5 consecutive readings to avoid false positives
-                log("🔴 [OFF ROUTE] Triggering reroute after 5 consecutive readings")
-                handleOffRoute()
+        // Check if off route - BUT NOT while we're already rerouting (prevent reroute storms)
+        if !isRerouting {
+            if isOffRoute(location: location) {
+                consecutiveOffRouteCount += 1
+                log("⚠️ [OFF ROUTE] Off route detected - count: \(consecutiveOffRouteCount)/10")
+                if consecutiveOffRouteCount >= 10 { // 10 consecutive readings to avoid false positives from GPS drift
+                    log("🔴 [OFF ROUTE] Triggering reroute after 10 consecutive readings")
+                    handleOffRoute()
+                }
+            } else {
+                if consecutiveOffRouteCount > 0 {
+                    log("✅ [ON ROUTE] Back on route - resetting counter (was at \(consecutiveOffRouteCount))")
+                }
+                consecutiveOffRouteCount = 0
             }
         } else {
-            if consecutiveOffRouteCount > 0 {
-                log("✅ [ON ROUTE] Back on route - resetting counter")
-            }
-            consecutiveOffRouteCount = 0
+            log("⏸️  [OFF ROUTE SKIP] Skipping off-route check - currently rerouting")
         }
 
         // Voice guidance - use published property
@@ -802,9 +878,10 @@ class NavigationManager: NSObject, ObservableObject {
         currentStepIndex += 1
         updateCurrentAndNextSteps()
         lastAnnouncedDistance = nil // Reset for next step
-        
+
         // Reset missed turn detection when advancing to new step
         lastDistanceToNextTurn = 0
+        lastDistanceToNextStep = 0  // Reset smart advancement tracking
         distanceIncreasingCount = 0
         missedTurnDetected = false
         hasApproachedTurn = false  // Reset - user hasn't approached the new turn yet
@@ -886,40 +963,44 @@ class NavigationManager: NSObject, ObservableObject {
 
     private func handleOffRoute() {
         guard let dest = destination else { return }
-        
-        log("🔄 [REROUTE] User went off route - calculating smart reroute options")
-        
+
+        log("🔄 [REROUTE] User went off route - analyzing Apple's alternate routes")
+
         // Set rerouting flag
         isRerouting = true
-        
-        // Request BOTH a U-turn route and alternate routes
-        calculateSmartReroute(to: dest)
+
+        // CRITICAL: Reset the off-route counter to prevent reroute storms
+        consecutiveOffRouteCount = 0
+        log("🔄 [REROUTE] Reset consecutiveOffRouteCount to prevent reroute storm")
+
+        // Check if we're on a waypoint route - if so, reroute to the NEXT waypoint, not final destination
+        if let route = selectedRoute, let segments = route.routeSegments, segments.count > 1 {
+            // This is a waypoint route - find which segment we're on
+            log("🔄 [REROUTE] Currently on waypoint route with \(segments.count) segments")
+
+            // For now, reroute to the same final destination (this will show route selection)
+            // The user can re-add waypoints if needed
+            log("🔄 [REROUTE] Rerouting to final destination (waypoints cleared)")
+        }
+
+        // Go directly to smart route selection
+        calculateStandardReroute(to: dest)
     }
     
-    private func calculateSmartReroute(to destination: CLLocationCoordinate2D, avoidUTurn: Bool = false, waypointDistance: Double = 200.0) {
+    private func calculateStandardReroute(to destination: CLLocationCoordinate2D) {
         guard let userLocation = locationManager.userLocation else {
-            log("❌ [SMART REROUTE] No user location")
+            log("❌ [STANDARD REROUTE] No user location")
             return
         }
 
-        // If avoiding U-turn, add a waypoint ahead in the user's current direction
-        // This forces MapKit to route forward through that point instead of turning around
-        if avoidUTurn, let heading = userLocation.course >= 0 ? userLocation.course : nil {
-            let waypointCoordinate = calculateCoordinate(from: userLocation.coordinate, distance: waypointDistance, bearing: heading)
-            log("🎯 [UTURN AVOID] Adding waypoint \(Int(waypointDistance))m ahead at heading \(Int(heading))°")
-            log("🎯 [UTURN AVOID] Route will go: Current Location → Waypoint → Destination")
+        log("🔄 [STANDARD REROUTE] Requesting ALL alternate routes from Apple Maps")
 
-            // Use segmented routing with the waypoint
-            calculateSegmentedRoute(from: userLocation.coordinate, waypoints: [waypointCoordinate], to: destination, retryCount: 0)
-            return
-        }
-
-        // Standard direct routing (no U-turn avoidance)
+        // Standard direct routing - request ALL alternates
         let request = MKDirections.Request()
         request.source = MKMapItem(placemark: MKPlacemark(coordinate: userLocation.coordinate))
         request.destination = MKMapItem(placemark: MKPlacemark(coordinate: destination))
         request.transportType = .automobile
-        request.requestsAlternateRoutes = true  // Get multiple route options
+        request.requestsAlternateRoutes = true  // Get as many route options as possible
 
         // Apply highway avoidance if enabled
         if settings.avoidHighways {
@@ -931,82 +1012,194 @@ class NavigationManager: NSObject, ObservableObject {
             guard let self = self else { return }
 
             if let error = error {
-                log("❌ [SMART REROUTE] Error: \(error.localizedDescription)")
+                log("❌ [STANDARD REROUTE] Error: \(error.localizedDescription)")
                 self.status = .error(error.localizedDescription)
                 self.isRerouting = false
                 return
             }
 
             guard let response = response, !response.routes.isEmpty else {
-                log("❌ [SMART REROUTE] No routes found")
+                log("❌ [STANDARD REROUTE] No routes found")
                 self.status = .error("No route available")
                 self.isRerouting = false
                 return
             }
 
-            // Convert all routes to NavigationRoute objects
-            let navRoutes = response.routes.enumerated().map { index, route in
-                NavigationRoute(
-                    route: route,
-                    name: index == 0 ? "Fastest Route" : "Alternate Route \(index)",
-                    distance: route.distance,
-                    expectedTravelTime: route.expectedTravelTime,
-                    combinedPolyline: nil,
-                    routeSegments: nil
-                )
-            }
-
-            // Check if the route wants us to do a U-turn
-            // DISABLED U-turn rejection - waypoint routing fails when waypoint is off-road
-            // Instead rely on wrong-way detection to catch issues early
-            // Log the route direction for debugging
-            if !avoidUTurn, let userHeading = userLocation.course >= 0 ? userLocation.course : nil,
-               let firstRoute = response.routes.first,
-               !firstRoute.steps.isEmpty {
-
-                // Find the first step with actual polyline data (skip empty steps)
-                var routeInitialBearing: Double?
-                for step in firstRoute.steps {
-                    let pointsPtr = step.polyline.points()
-                    let pointCount = step.polyline.pointCount
-
-                    if pointCount >= 2 {
-                        // Calculate bearing from first to second point
-                        let coord1 = pointsPtr[0].coordinate
-                        let coord2 = pointsPtr[1].coordinate
-                        routeInitialBearing = coord1.bearing(to: coord2)
-                        break
-                    }
-                }
-
-                if let routeBearing = routeInitialBearing {
-                    // Calculate angle difference
-                    var angleDiff = abs(userHeading - routeBearing)
-                    if angleDiff > 180 {
-                        angleDiff = 360 - angleDiff
-                    }
-
-                    log("🧭 [ROUTE INFO] User heading: \(Int(userHeading))°, Route direction: \(Int(routeBearing))°, Diff: \(Int(angleDiff))°")
-                    if angleDiff > 100 {
-                        log("⚠️ [ROUTE INFO] Route requires U-turn (\(Int(angleDiff))° turn)")
-                    }
-                }
-            }
-
-            // Store the route options
-            self.pendingRouteOptions = navRoutes
-
-            // Compare routes and announce options
-            self.announceRerouteOptions(routes: navRoutes)
-
-            // Start following the fastest route by default
-            // User can override by making a U-turn (we'll detect that)
-            log("🔄 [SMART REROUTE] Starting with fastest route, watching for U-turn")
-            self.startNavigation(with: navRoutes[0])
-
-            // Set flag to watch for user's choice
-            self.waitingForUserRouteChoice = true
+            // Analyze all routes and pick best forward-heading route
+            self.selectBestForwardRoute(routes: response.routes, userLocation: userLocation, destination: destination)
         }
+    }
+
+    private func selectBestForwardRoute(routes: [MKRoute], userLocation: CLLocation, destination: CLLocationCoordinate2D) {
+        log("🔍 [ROUTE ANALYSIS] Analyzing \(routes.count) routes from Apple Maps")
+
+        guard let userHeading = userLocation.course >= 0 ? userLocation.course : nil else {
+            log("⚠️ [ROUTE ANALYSIS] No valid heading data, using fastest route")
+            let fastestRoute = NavigationRoute(
+                route: routes[0],
+                name: "Fastest Route",
+                distance: routes[0].distance,
+                expectedTravelTime: routes[0].expectedTravelTime,
+                combinedPolyline: nil,
+                routeSegments: nil
+            )
+            startNavigation(with: fastestRoute)
+            return
+        }
+
+        // Analyze each route's initial bearing
+        struct RouteAnalysis {
+            let route: MKRoute
+            let index: Int
+            let initialBearing: Double
+            let headingDiff: Double
+            let isForward: Bool  // Within 90 degrees of user heading
+        }
+
+        var analyses: [RouteAnalysis] = []
+
+        for (index, route) in routes.enumerated() {
+            // Find the first step with actual polyline data
+            var routeInitialBearing: Double?
+            for step in route.steps {
+                let pointsPtr = step.polyline.points()
+                let pointCount = step.polyline.pointCount
+
+                if pointCount >= 2 {
+                    let coord1 = pointsPtr[0].coordinate
+                    let coord2 = pointsPtr[1].coordinate
+                    routeInitialBearing = coord1.bearing(to: coord2)
+                    break
+                }
+            }
+
+            guard let bearing = routeInitialBearing else {
+                log("⚠️ [ROUTE ANALYSIS] Route \(index + 1): No bearing data")
+                continue
+            }
+
+            // Calculate angle difference
+            var headingDiff = abs(userHeading - bearing)
+            if headingDiff > 180 {
+                headingDiff = 360 - headingDiff
+            }
+
+            let isForward = headingDiff <= 90  // Within 90 degrees = forward
+
+            let analysis = RouteAnalysis(
+                route: route,
+                index: index,
+                initialBearing: bearing,
+                headingDiff: headingDiff,
+                isForward: isForward
+            )
+            analyses.append(analysis)
+
+            let forwardLabel = isForward ? "✅ FORWARD" : "🔄 U-TURN"
+            log("🔍 [ROUTE \(index + 1)] \(forwardLabel) - Bearing: \(Int(bearing))°, User: \(Int(userHeading))°, Diff: \(Int(headingDiff))°, Time: \(Int(route.expectedTravelTime / 60))min")
+        }
+
+        // Filter to only forward routes (within 90 degrees)
+        let forwardRoutes = analyses.filter { $0.isForward }
+
+        if forwardRoutes.isEmpty {
+            // NO forward routes available - stop navigation and recalculate to show route selection
+            log("❌ [ROUTE ANALYSIS] No forward routes available (all require U-turns)")
+            log("🛑 [NAV STOP] Stopping navigation - will recalculate and show route selection for waypoint")
+
+            // Save destination before clearing
+            guard let savedDestination = self.destination else {
+                log("❌ [WAYPOINT MODE] No destination to recalculate to")
+                status = .error("No destination available")
+                isRerouting = false
+                return
+            }
+
+            // Stop ALL current navigation state
+            speechSynthesizer.stopSpeaking(at: .immediate)
+            selectedRoute = nil
+            routeSteps = []
+            currentStepIndex = 0
+            currentStep = nil
+            nextStep = nil
+            remainingDistance = 0
+            remainingTime = 0
+            distanceToNextStep = 0
+            lastAnnouncedDistance = nil
+            consecutiveOffRouteCount = 0
+            isRerouting = false
+            fullRoutePolyline = nil
+            remainingRoutePolyline = nil
+            availableRoutes = []
+
+            // Set to idle first to clear navigation tab
+            status = .idle
+
+            // NOW speak the message
+            speak("Apple didn't make reroutes after missed turns easy — we're not magicians. Add a waypoint!")
+
+            // Recalculate routes to same destination - this will show route selection sheet
+            log("📍 [WAYPOINT MODE] Recalculating routes to \(savedDestination) - route selection will open")
+            calculateRoutes(to: savedDestination)
+            return
+        }
+
+        // Pick best forward route: fastest, unless times are close (within 10%), then use heading
+        log("✅ [ROUTE ANALYSIS] Found \(forwardRoutes.count) forward route(s)")
+
+        let sortedByTime = forwardRoutes.sorted { $0.route.expectedTravelTime < $1.route.expectedTravelTime }
+        let fastestTime = sortedByTime[0].route.expectedTravelTime
+
+        // Check if multiple routes have similar times (within 10% of fastest)
+        let similarTimeRoutes = sortedByTime.filter { $0.route.expectedTravelTime <= fastestTime * 1.10 }
+
+        let selectedAnalysis: RouteAnalysis
+        if similarTimeRoutes.count > 1 {
+            // Multiple routes with similar times - pick closest to user's heading
+            selectedAnalysis = similarTimeRoutes.min(by: { $0.headingDiff < $1.headingDiff })!
+            log("🎯 [ROUTE SELECTION] Multiple similar times - selected route closest to heading (diff: \(Int(selectedAnalysis.headingDiff))°)")
+        } else {
+            // Only one clearly fastest route
+            selectedAnalysis = sortedByTime[0]
+            log("🎯 [ROUTE SELECTION] Selected fastest forward route")
+        }
+
+        let selectedRoute = NavigationRoute(
+            route: selectedAnalysis.route,
+            name: selectedAnalysis.index == 0 ? "Fastest Route" : "Alternate Route \(selectedAnalysis.index)",
+            distance: selectedAnalysis.route.distance,
+            expectedTravelTime: selectedAnalysis.route.expectedTravelTime,
+            combinedPolyline: nil,
+            routeSegments: nil
+        )
+
+        log("✅ [ROUTE SELECTION] Auto-selected route \(selectedAnalysis.index + 1) - \(selectedRoute.distanceString), \(Int(selectedRoute.expectedTravelTime / 60))min")
+        startNavigation(with: selectedRoute)
+    }
+
+    private func calculateSmartReroute(to destination: CLLocationCoordinate2D, avoidUTurn: Bool = false, waypointDistance: Double = 500.0) {
+        guard let userLocation = locationManager.userLocation else {
+            log("❌ [SMART REROUTE] No user location")
+            return
+        }
+
+        // If avoiding U-turn, add a waypoint ahead in the user's current direction
+        // This forces MapKit to route forward through that point instead of turning around
+        if avoidUTurn, let heading = userLocation.course >= 0 ? userLocation.course : nil {
+            let waypointCoordinate = calculateCoordinate(from: userLocation.coordinate, distance: waypointDistance, bearing: heading)
+            log("🎯 [UTURN AVOID] Adding waypoint \(Int(waypointDistance))m ahead at heading \(Int(heading))°")
+            log("🎯 [UTURN AVOID] Current location: \(userLocation.coordinate.latitude), \(userLocation.coordinate.longitude)")
+            log("🎯 [UTURN AVOID] Waypoint location: \(waypointCoordinate.latitude), \(waypointCoordinate.longitude)")
+            log("🎯 [UTURN AVOID] Destination: \(destination.latitude), \(destination.longitude)")
+            log("🎯 [UTURN AVOID] Route will go: Current Location → Waypoint → Destination")
+
+            // Use segmented routing with the waypoint - will fall back to standard if it fails
+            calculateSegmentedRoute(from: userLocation.coordinate, waypoints: [waypointCoordinate], to: destination, retryCount: 0, fallbackToStandard: true)
+            return
+        }
+
+        // Standard direct routing (no U-turn avoidance)
+        calculateStandardReroute(to: destination)
     }
     
     private func announceRerouteOptions(routes: [NavigationRoute]) {
@@ -1069,10 +1262,11 @@ class NavigationManager: NSObject, ObservableObject {
             return
         }
 
-        // CRITICAL: Check if user is going the WRONG WAY (distance to destination increasing)
-        // This bypasses cooldown because it's a critical error
-        // ONLY trigger if close to the next turn (<200m) - otherwise they may just be finding a turnaround
-        if let destinationCoord = self.destination, distanceToNextStep < 200.0 {
+        // DISABLED: WRONG WAY detection was too sensitive - GPS drift of 1-5m is normal
+        // This was causing false reroutes while driving normally on route
+        // Keeping distance-based detection below which is more conservative (requires 3 consecutive readings)
+        /*
+        if let destinationCoord = self.destination, distanceToNextStep < 300.0 {
             let currentDistToDestination = location.distance(from: CLLocation(latitude: destinationCoord.latitude, longitude: destinationCoord.longitude))
 
             if let lastDist = lastDistanceToDestination {
@@ -1105,6 +1299,7 @@ class NavigationManager: NSObject, ObservableObject {
 
             lastDistanceToDestination = currentDistToDestination
         }
+        */
 
         // Cooldown period after reroute to prevent reroute storms
         // Don't check for missed turns for 10 seconds after a reroute
@@ -1121,10 +1316,10 @@ class NavigationManager: NSObject, ObservableObject {
             hasApproachedTurn = true
         }
 
-        // HEADING-BASED DETECTION (fast and accurate)
-        // Check heading if user is far from turn AND distance is increasing
-        // OR if distance from ROUTE is high (they may have missed earlier turn)
-
+        // DISABLED: HEADING-BASED detection was too sensitive - heading data can be unreliable
+        // This was causing false reroutes while driving normally on route
+        // Keeping distance-based detection below which is more conservative (requires 3 consecutive readings)
+        /*
         let distanceFromRoute = location.distance(from: CLLocation(latitude: nextStepCoordinate.latitude, longitude: nextStepCoordinate.longitude))
 
         // Check heading if EITHER:
@@ -1158,17 +1353,19 @@ class NavigationManager: NSObject, ObservableObject {
                 }
             }
         }
+        */
 
-        // DISTANCE-BASED DETECTION (backup for when heading data is unreliable)
+        // DISTANCE-BASED DETECTION - Most conservative detection method
         // Only check for missed turns when we're more than 50m away
+        // Requires 5 consecutive readings of increasing distance to avoid false positives
         if distanceToNextStep > 50 && lastDistanceToNextTurn > 50 {
             if distanceToNextStep > lastDistanceToNextTurn + 20 {  // Distance increased by 20+ meters
                 distanceIncreasingCount += 1
-                log("⚠️ [MISSED TURN?] Distance to next turn INCREASING: \(Int(lastDistanceToNextTurn))m → \(Int(distanceToNextStep))m (count: \(distanceIncreasingCount)/3)")
-                
-                if distanceIncreasingCount >= 3 {
-                    // User has been driving away from the turn for 3 consecutive checks
-                    log("🚨 [MISSED TURN DETECTED - DISTANCE] Distance increased 3 times - user likely missed the turn")
+                log("⚠️ [MISSED TURN?] Distance to next turn INCREASING: \(Int(lastDistanceToNextTurn))m → \(Int(distanceToNextStep))m (count: \(distanceIncreasingCount)/5)")
+
+                if distanceIncreasingCount >= 5 {
+                    // User has been driving away from the turn for 5 consecutive checks
+                    log("🚨 [MISSED TURN DETECTED - DISTANCE] Distance increased 5 times - user likely missed the turn")
                     missedTurnDetected = true
                     handleMissedTurn()
                 }
@@ -1212,7 +1409,7 @@ class NavigationManager: NSObject, ObservableObject {
     private func handleMissedTurn() {
         guard let dest = destination else { return }
 
-        log("🔄 [MISSED TURN] Triggering smart reroute (missed turn detected)")
+        log("🔄 [MISSED TURN] Triggering smart route selection (missed turn detected)")
 
         // Set rerouting flag
         isRerouting = true
@@ -1224,8 +1421,8 @@ class NavigationManager: NSObject, ObservableObject {
         missedTurnDetected = false
         distanceIncreasingCount = 0
 
-        // Calculate smart reroute options
-        calculateSmartReroute(to: dest)
+        // Go directly to smart route selection (NO waypoint routing)
+        calculateStandardReroute(to: dest)
     }
 
 
@@ -1240,11 +1437,8 @@ class NavigationManager: NSObject, ObservableObject {
     }
 
     private func announceIfNeeded(distanceToStep distance: Double) {
-        log("🚨 [DEBUG] announceIfNeeded CALLED with distance: \(distance)m")
-
         // Sanity check: Don't announce if distance is unreasonably far
         if distance > 8046.72 {
-            log("🚨 [DEBUG] Distance > 8047m, returning")
             return
         }
 
@@ -1262,23 +1456,47 @@ class NavigationManager: NSObject, ObservableObject {
             return
         }
 
-        log("🚨 [DEBUG] Checking thresholds. lastAnnounced: \(lastAnnouncedDistance!)m, current: \(distance)m")
-
         // Check each threshold for crossing (from far to near)
         // announceDistances = [804.672, 304.8, 30.48] (1/2 mile, 1000ft, 100ft)
         for (index, threshold) in announcementDistances.enumerated() {
             let justCrossed = lastAnnouncedDistance! > threshold && distance <= threshold
-            log("🚨 [DEBUG] Threshold[\(index)]=\(threshold)m, justCrossed=\(justCrossed)")
 
             if justCrossed {
                 if let instruction = currentStep?.instruction {
+                    // FILTER WAYPOINT "DESTINATION" ANNOUNCEMENTS
+                    // MKRoute steps include "destination" or "arrive" instructions at waypoints
+                    // Only announce these when actually at the final destination
+                    let lowercasedInstruction = instruction.lowercased()
+                    let containsDestination = lowercasedInstruction.contains("destination") ||
+                                             lowercasedInstruction.contains("arrive")
+                    let isFinalStep = currentStepIndex >= routeSteps.count - 1
+
+                    if containsDestination && !isFinalStep {
+                        // Skip this announcement - it's a waypoint "destination" not the real destination
+                        log("⏭️  [ANNOUNCE SKIP] Skipping waypoint destination announcement: '\(instruction)' (step \(currentStepIndex + 1)/\(routeSteps.count))")
+                        lastAnnouncedDistance = distance  // Update tracking so we don't re-announce
+                        return
+                    }
+
+                    // Calculate actual distance for announcement (don't use threshold value)
                     let announcement: String
                     switch index {
-                    case 0:  // Crossed 804.672m (1/2 mile)
-                        announcement = "In half a mile, \(instruction)"
-                    case 1:  // Crossed 304.8m (1000 feet)
-                        announcement = "In 1000 feet, \(instruction)"
-                    default:  // Crossed 30.48m (100 feet) - very close
+                    case 0:  // Crossed ~804.672m (1/2 mile) threshold
+                        // Announce ACTUAL distance, not "half a mile"
+                        let actualMiles = distance / 1609.34
+                        let roundedTenth = round(actualMiles * 10) / 10  // Round to nearest 0.1
+                        if roundedTenth >= 0.5 {
+                            announcement = "In \(formatDistance(roundedTenth)) miles, \(instruction)"
+                        } else {
+                            let feet = Int(distance * 3.28084)
+                            announcement = "In \(feet) feet, \(instruction)"
+                        }
+                    case 1:  // Crossed ~304.8m (1000 feet) threshold
+                        // Announce ACTUAL distance in feet
+                        let actualFeet = Int(distance * 3.28084)
+                        let roundedFeet = (actualFeet / 100) * 100  // Round to nearest 100 ft
+                        announcement = "In \(roundedFeet) feet, \(instruction)"
+                    default:  // Crossed ~30.48m (100 feet) - very close
                         announcement = instruction
                     }
 
@@ -1290,12 +1508,38 @@ class NavigationManager: NSObject, ObservableObject {
             }
         }
 
-        // Update last distance for next comparison
+        // Update last distance for next comparison (silently)
         if distance < lastAnnouncedDistance! {
-            log("🚨 [DEBUG] Updating lastAnnouncedDistance from \(lastAnnouncedDistance!) to \(distance)")
             lastAnnouncedDistance = distance
         }
     }
+    private func formatDistance(_ miles: Double) -> String {
+        // Format distance for natural voice announcement
+        // Examples: 0.5 -> "half a", 0.3 -> "point three", 1.2 -> "one point two"
+        if miles == 0.5 {
+            return "half a"
+        } else if miles == 1.0 {
+            return "one"
+        } else if miles == 2.0 {
+            return "two"
+        } else if miles == 3.0 {
+            return "three"
+        } else if miles < 1.0 {
+            // Format as "point X" for fractions
+            let tenths = Int(miles * 10)
+            return "point \(tenths)"
+        } else {
+            // Format as "X point Y" for values over 1
+            let whole = Int(miles)
+            let tenths = Int((miles - Double(whole)) * 10)
+            if tenths == 0 {
+                return "\(whole)"
+            } else {
+                return "\(whole) point \(tenths)"
+            }
+        }
+    }
+
     private func speak(_ text: String) {
         // Log all speech requests
         log("🔊 [VOICE] Speech requested: \"\(text)\"")

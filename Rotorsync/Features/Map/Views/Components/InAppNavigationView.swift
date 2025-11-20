@@ -207,11 +207,18 @@ struct InAppNavigationView: View {
 
     private func distanceString(_ meters: Double) -> String {
         let feet = meters * 3.28084
+        let miles = meters / 1609.34
 
         if feet < 528 {
+            // Show feet for very short distances (< 0.1 mile)
             return String(format: "%.0f ft", feet)
+        } else if miles < 1.0 {
+            // Show 2 decimal places for accuracy when under 1 mile
+            // e.g., "0.24 mi" instead of "0.2 mi"
+            return String(format: "%.2f mi", miles)
         } else {
-            let miles = meters / 1609.34
+            // Show 1 decimal place for longer distances
+            // e.g., "1.5 mi" or "12.3 mi"
             return String(format: "%.1f mi", miles)
         }
     }
