@@ -35,6 +35,7 @@ struct FieldMap: Identifiable, Codable {
     let name: String
     let customer: String
     let area: Double
+    let areaNominal: Double?
     let status: String
     let orderNumber: String
     let requestedUrl: String
@@ -45,12 +46,13 @@ struct FieldMap: Identifiable, Codable {
     let notes: String
     let deleted: Bool
     let rts: Bool
-    
+
     enum CodingKeys: String, CodingKey {
         case id
         case name
         case customer
         case area
+        case areaNominal = "area_nominal"
         case status
         case orderNumber
         case requestedUrl
@@ -61,6 +63,28 @@ struct FieldMap: Identifiable, Codable {
         case notes
         case deleted
         case rts
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        customer = try container.decode(String.self, forKey: .customer)
+        area = try container.decode(Double.self, forKey: .area)
+        status = try container.decode(String.self, forKey: .status)
+        orderNumber = try container.decode(String.self, forKey: .orderNumber)
+        requestedUrl = try container.decode(String.self, forKey: .requestedUrl)
+        workedUrl = try container.decode(String.self, forKey: .workedUrl)
+        modifiedDate = try container.decode(Int.self, forKey: .modifiedDate)
+        productList = try container.decode(String.self, forKey: .productList)
+        address = try container.decode(String.self, forKey: .address)
+        notes = try container.decode(String.self, forKey: .notes)
+        deleted = try container.decode(Bool.self, forKey: .deleted)
+        rts = try container.decode(Bool.self, forKey: .rts)
+
+        // Decode area_nominal from Tabula API
+        areaNominal = try container.decodeIfPresent(Double.self, forKey: .areaNominal)
+        print("📊 [DECODE] Job \(id) - area_nominal from API: \(areaNominal ?? -999) hectares")
     }
 }
 

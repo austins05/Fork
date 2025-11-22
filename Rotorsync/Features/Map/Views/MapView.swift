@@ -27,8 +27,9 @@ struct MapView: View {
     @AppStorage("showGroupsButton") private var showGroupsButton: Bool = true
     @AppStorage("showFilesButton") private var showFilesButton: Bool = true
     @AppStorage("showMPZImportButton") private var showMPZImportButton: Bool = true
+    @AppStorage("showPanicButton") private var showPanicButton: Bool = true
     @AppStorage("flightMode") private var flightMode: Bool = false
-    @AppStorage("headingUpMode") private var headingUpMode: Bool = false
+    @AppStorage("useHeadingUp") private var useHeadingUp: Bool = true
 
     @State private var droppedPins: [DroppedPinViewModel] = []
     @State private var groupPins: [APIPin] = []
@@ -80,6 +81,14 @@ struct MapView: View {
     // Navigation
     @StateObject private var navigationManager: NavigationManager
     @State private var isNavigating = false
+
+    // Field selection
+    @State private var isFieldSelectionMode = false
+    @State private var selectedFieldIds: Set<Int> = []
+    @State private var showSelectionInfo = false
+    @State private var circleDrawingPath: [CGPoint] = []
+    @State private var targetRegion: MKCoordinateRegion?
+    @State private var hiddenFieldsStack: [FieldData] = []
     @State private var showRouteSelection = false
     @State private var selectedRouteIndex: Int?
     @State private var allRoutes: [NavigationRoute] = []
@@ -103,6 +112,7 @@ struct MapView: View {
     @State private var projection5MinMark: CLLocationCoordinate2D?
     @State private var projection10MinMark: CLLocationCoordinate2D?
     @State private var projection15MinMark: CLLocationCoordinate2D?
+    @State private var lastProjectionUpdate = Date()
 
     init() {
         let locationMgr = LocationManager.shared
@@ -205,198 +215,78 @@ struct MapView: View {
         }
     }
 
-    var body: some View {
-        ZStack(alignment: .topLeading) {
-            MapRepresentable(
-                cameraPosition: $cameraPosition,
-                droppedPins: $droppedPins,
-                groupPins: $groupPins,
-                importedFields: $importedFields,
-                showImportedFields: $showImportedFields,
-                hoveredField: $hoveredField,
-                path: $path,
-                mapStyle: $mapStyle,
-                userTrackingMode: $userTrackingMode,
-                mapCenter: $mapCenter,
-                shouldForceUpdate: $shouldForceUpdate,
-                isMeasuring: $isMeasuring,
-                measurementPins: $measurementPins,
-                navigationRoute: $navigationRoute,
-                allRoutes: $allRoutes,
-                selectedRouteIndex: $selectedRouteIndex,
-                isNavigating: $isNavigating,
-                waypoints: $navigationManager.waypoints,
-                isAddingWaypoint: $isAddingWaypoint,
-                navigationCameraAltitude: $navigationCameraAltitude,
-                flyToLine: $flyToLine,
-                remainingRoutePolyline: $navigationManager.remainingRoutePolyline,
-                forceOverlayRefresh: $forceOverlayRefresh,
-                projectionRayLine: $projectionRayLine,
-                projection5MinMark: $projection5MinMark,
-                projection10MinMark: $projection10MinMark,
-                projection15MinMark: $projection15MinMark,
-                flightMode: $flightMode,
-                usingTCPGPS: $locationManager.gpsSettings.tcpEnabled,
-                tcpUserLocation: $locationManager.userLocation,
-                devices: viewModel.devices,
-                onPinTapped: { pin in selectedPinId = pin.id },
-                onGroupPinTapped: { pin in selectedGroupPin = pin },
-                onDeviceTapped: { selectedDevice = $0 },
-                onFieldTapped: { selectedField = $0 },
-                onLongPressPinDropped: { coord, name in
-                    Task { await handlePinDrop(coordinate: coord, name: name) }
-                },
-                onMeasurementTap: { coord in
-                    addMeasurementPin(coordinate: coord)
-                },
-                onRouteTapped: { routeIndex in
-                    selectedRouteIndex = routeIndex
-                },
-                onWaypointTapped: { index in
-                    showWaypointRemoveAlert(index: index)
-                },
-                onAddWaypoint: { coordinate in
-                    navigationManager.addWaypoint(coordinate)
-                    isAddingWaypoint = false
-                },
-                onPinDoubleTapped: { pin in
-                    // Double-tap on pin: check flight mode
-                    if flightMode {
-                        print("✈️ [DOUBLE-TAP] Flight mode enabled - starting Fly To")
-                        startFlyTo(to: pin.coordinate)
-                    } else {
-                        print("🚗 [DOUBLE-TAP] Normal mode - starting Drive To navigation")
-                        startNavigation(to: pin.coordinate)
-                    }
-                },
-                onGroupPinDoubleTapped: { pin in
-                    let coordinate = CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude)
-                    // Double-tap on group pin: check flight mode
-                    if flightMode {
-                        print("✈️ [DOUBLE-TAP] Flight mode enabled - starting Fly To (group pin)")
-                        startFlyTo(to: coordinate)
-                    } else {
-                        print("🚗 [DOUBLE-TAP] Normal mode - starting Drive To navigation (group pin)")
-                        startNavigation(to: coordinate)
-                    }
-                }
-            )
-            .ignoresSafeArea()
-            .onAppear {
-                locationManager.requestLocationPermission()
-                Task {
-                    await viewModel.fetchDevices()
-                    
-                    // Only set initial region once
-                    if !hasSetInitialRegion {
-                        setInitialRegion(animated: false)
-                        hasSetInitialRegion = true
-                    }
-                    
-                    await reloadPins()
-                    await loadGroupPins()
-                    await ensureDefaultFolders()
-                }
-            }
-            .onReceive(locationManager.$userLocation) { newLoc in
-               if let new = newLoc, isTracking {
-                   if let last = trackedLocations.last {
-                       totalDistance += new.distance(from: last) / 1609.34
-                   }
-                   trackedLocations.append(new)
-                   path.append(new.coordinate)
-               }
+    // MARK: - View Components
 
-               // Speed-based zoom during navigation
-               if isNavigating, let location = newLoc, userTrackingMode == .followWithHeading {
-                   adjustZoomForSpeed(speed: location.speed, coordinate: location.coordinate)
-               }
+    @ViewBuilder
+    private var mapLayer: some View {
+        MapRepresentable(
+            cameraPosition: $cameraPosition,
+            droppedPins: $droppedPins,
+            groupPins: $groupPins,
+            importedFields: $importedFields,
+            showImportedFields: $showImportedFields,
+            hoveredField: $hoveredField,
+            path: $path,
+            mapStyle: $mapStyle,
+            userTrackingMode: $userTrackingMode,
+            mapCenter: $mapCenter,
+            shouldForceUpdate: $shouldForceUpdate,
+            isMeasuring: $isMeasuring,
+            measurementPins: $measurementPins,
+            navigationRoute: $navigationRoute,
+            allRoutes: $allRoutes,
+            selectedRouteIndex: $selectedRouteIndex,
+            isNavigating: $isNavigating,
+            waypoints: $navigationManager.waypoints,
+            isAddingWaypoint: $isAddingWaypoint,
+            navigationCameraAltitude: $navigationCameraAltitude,
+            flyToLine: $flyToLine,
+            remainingRoutePolyline: $navigationManager.remainingRoutePolyline,
+            forceOverlayRefresh: $forceOverlayRefresh,
+            projectionRayLine: $projectionRayLine,
+            projection5MinMark: $projection5MinMark,
+            projection10MinMark: $projection10MinMark,
+            projection15MinMark: $projection15MinMark,
+            flightMode: $flightMode,
+            usingTCPGPS: .constant(LocationManager.shared.gpsSettings.tcpEnabled),
+            tcpUserLocation: .constant(LocationManager.shared.gpsSettings.tcpEnabled ? LocationManager.shared.tcpGPSClient.currentLocation : nil),
+            isFieldSelectionMode: $isFieldSelectionMode,
+            selectedFieldIds: $selectedFieldIds,
+            circleDrawingPath: $circleDrawingPath,
+            targetRegion: $targetRegion,
+            devices: viewModel.devices,
+            onPinTapped: handlePinTapped,
+            onGroupPinTapped: handleGroupPinTapped,
+            onDeviceTapped: handleDeviceTapped,
+            onFieldTapped: handleFieldTapped,
+            onLongPressPinDropped: handleLongPressPinDropped,
+            onMeasurementTap: handleMeasurementTap,
+            onRouteTapped: handleRouteTapped,
+            onWaypointTapped: handleWaypointTapped,
+            onAddWaypoint: handleAddWaypoint,
+            onPinDoubleTapped: handlePinDoubleTapped,
+            onGroupPinDoubleTapped: handleGroupPinDoubleTapped
+        )
+        .ignoresSafeArea()
+    }
 
-               // Track heading and speed history for both Fly-To and Flight Mode
-               if (isFlyingTo || flightMode), let location = newLoc {
-                   // Track location history for heading calculation (last 30 feet ≈ 2-3 updates)
-                   headingLocationHistory.append(location)
-                   if headingLocationHistory.count > 3 {
-                       headingLocationHistory.removeFirst()
-                   }
+    @ViewBuilder
+    private var crosshairLayer: some View {
+        CrosshairOverlay(
+            userLocation: locationManager.userLocation,
+            mapCenter: mapCenter
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .allowsHitTesting(false)
+    }
 
-                   // Track speed history for average calculation (last 1 minute)
-                   let now = Date()
-                   speedHistory.append((speed: location.speed, timestamp: now))
-                   speedHistory.removeAll { now.timeIntervalSince($0.timestamp) > 60 } // Keep only last 60 seconds
-
-                   // Calculate heading from movement (last 30 feet) or GPS course
-                   if headingLocationHistory.count >= 2 {
-                       let oldest = headingLocationHistory.first!
-                       let newest = location
-                       currentHeading = calculateBearing(from: oldest.coordinate, to: newest.coordinate)
-                       print("🧭 [HEADING] From movement: \(currentHeading)°")
-                   } else if location.course >= 0 {
-                       // Fallback to GPS course when not enough movement data
-                       currentHeading = location.course
-                       print("🧭 [HEADING] From GPS course: \(currentHeading)°")
-                   }
-               }
-
-               // Update fly-to straight line
-               if isFlyingTo, let destination = flyToDestination, let location = newLoc {
-                   flyToLine = [location.coordinate, destination]
-               }
-
-               // Update flight mode projection
-               if flightMode {
-                   updateFlightModeProjection()
-               }
-           }
-            .onReceive(refreshTimer) { _ in }
-            .onReceive(NotificationCenter.default.publisher(for: .coreDataDidChange)) { _ in
-                Task { await reloadPins() }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .showGroupPinOnMap)) { notification in
-                if let pin = notification.object as? APIPin {
-                    let coordinate = CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude)
-                    let region = MKCoordinateRegion(
-                        center: coordinate,
-                        span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                    )
-                    setCameraPosition(.region(region), animated: true)
-                }
-            }
-            .onReceive(SharedFieldStorage.shared.$shouldImportToMap) { shouldImport in
-                if shouldImport {
-                    print("📍 Importing fields from SharedFieldStorage")
-                    print("📍 Pending fields count: \(SharedFieldStorage.shared.pendingFieldsToImport.count)")
-                    print("📍 Current importedFields count BEFORE: \(importedFields.count)")
-                    importedFields.append(contentsOf: SharedFieldStorage.shared.pendingFieldsToImport)
-                    SharedFieldStorage.shared.clearPendingFields()
-                    print("📍 Current importedFields count AFTER: \(importedFields.count)")
-                    print("📍 Imported field IDs: \(importedFields.map { $0.id })")
-                    updateMapRegion(animated: true)
-
-                    let count = importedFields.count
-                    showAlert(title: "Fields Imported", message: "Added \(count) fields from Tabula to map")
-                }
-            }
-            .onReceive(SharedFieldStorage.shared.$shouldClearAllFields) { shouldClear in
-                if shouldClear {
-                    let count = importedFields.count
-                    importedFields.removeAll()
-                    SharedFieldStorage.shared.shouldClearAllFields = false
-                    showAlert(title: "Fields Cleared", message: "Removed \(count) field\(count == 1 ? "" : "s") from map")
-                }
-            }
-            .id(refreshTrigger)
-            
-            CrosshairOverlay(
-               userLocation: locationManager.userLocation,
-               mapCenter: mapCenter  // This should update as you pan
-           )
-           .frame(maxWidth: .infinity, maxHeight: .infinity)
-           .allowsHitTesting(false)
+    @ViewBuilder
+    private var overlaysLayer: some View {
+        Group {
 
             overlayView()
 
-            // Temperature graph overlay (positioned below speed/altitude overlay)
+            // Temperature graph overlay
             TemperatureGraphOverlay(
                 size: $temperatureGraphSize,
                 isVisible: $showTemperatureGraph,
@@ -404,7 +294,7 @@ struct MapView: View {
                 graphScale: $temperatureGraphScale
             )
 
-            // Field info card (auto-appears when zoomed in)
+            // Field info card
             if let field = hoveredField {
                 VStack {
                     Spacer()
@@ -416,9 +306,7 @@ struct MapView: View {
                 .animation(.easeInOut(duration: 0.3), value: hoveredField?.id)
             }
 
-
-
-            // Measurement tool display - top right corner
+            // Measurement tool display
             if isMeasuring {
                 HStack(alignment: .top) {
                     Spacer()
@@ -435,7 +323,6 @@ struct MapView: View {
                             Divider()
                                 .opacity(0.2)
 
-                            // Scrollable segment distances
                             ScrollView {
                                 VStack(alignment: .leading, spacing: 4) {
                                     ForEach(0..<segmentDistances.count, id: \.self) { index in
@@ -503,7 +390,284 @@ struct MapView: View {
                 .padding(.top, 28)
                 .ignoresSafeArea(.all, edges: .top)
             }
+
             bottomButtonsView()
+        }
+    }
+
+    // MARK: - Event Handlers
+
+    private func handlePinTapped(_ pin: DroppedPinViewModel) {
+        selectedPinId = pin.id
+    }
+
+    private func handleGroupPinTapped(_ pin: APIPin) {
+        selectedGroupPin = pin
+    }
+
+    private func handleDeviceTapped(_ device: Device) {
+        selectedDevice = device
+    }
+
+    private func handleFieldTapped(_ field: FieldData) {
+        selectedField = field
+    }
+
+    private func handleLongPressPinDropped(coord: CLLocationCoordinate2D, name: String) {
+        Task { await handlePinDrop(coordinate: coord, name: name) }
+    }
+
+    private func handleMeasurementTap(coord: CLLocationCoordinate2D) {
+        addMeasurementPin(coordinate: coord)
+    }
+
+    private func handleRouteTapped(routeIndex: Int) {
+        selectedRouteIndex = routeIndex
+    }
+
+    private func handleWaypointTapped(index: Int) {
+        showWaypointRemoveAlert(index: index)
+    }
+
+    private func handleAddWaypoint(coordinate: CLLocationCoordinate2D) {
+        navigationManager.addWaypoint(coordinate)
+        isAddingWaypoint = false
+    }
+
+    private func handlePinDoubleTapped(_ pin: DroppedPinViewModel) {
+        if flightMode {
+            print("✈️ [DOUBLE-TAP] Flight mode enabled - starting Fly To")
+            startFlyTo(to: pin.coordinate)
+        } else {
+            print("🚗 [DOUBLE-TAP] Normal mode - starting Drive To navigation")
+            startNavigation(to: pin.coordinate)
+        }
+    }
+
+    private func handleGroupPinDoubleTapped(_ pin: APIPin) {
+        let coordinate = CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude)
+        if flightMode {
+            print("✈️ [DOUBLE-TAP] Flight mode enabled - starting Fly To (group pin)")
+            startFlyTo(to: coordinate)
+        } else {
+            print("🚗 [DOUBLE-TAP] Normal mode - starting Drive To navigation (group pin)")
+            startNavigation(to: coordinate)
+        }
+    }
+
+    // MARK: - Lifecycle Handlers
+
+    private func handleOnAppear() {
+        locationManager.requestLocationPermission()
+        Task {
+            await viewModel.fetchDevices()
+
+            if !hasSetInitialRegion {
+                setInitialRegion(animated: false)
+                hasSetInitialRegion = true
+            }
+
+            await reloadPins()
+            await loadGroupPins()
+            await ensureDefaultFolders()
+        }
+    }
+
+    private func handleLocationUpdate(_ newLoc: CLLocation?) {
+        // Track location if tracking is enabled
+        if let new = newLoc, isTracking {
+            if let last = trackedLocations.last {
+                totalDistance += new.distance(from: last) / 1609.34
+            }
+            trackedLocations.append(new)
+            path.append(new.coordinate)
+        }
+
+        // Speed-based zoom during navigation (works with both follow modes)
+        if isNavigating, let location = newLoc, userTrackingMode != .none {
+            adjustZoomForSpeed(speed: location.speed, coordinate: location.coordinate)
+        }
+
+        // Track heading and speed for flight mode
+        if (isFlyingTo || flightMode), let location = newLoc {
+            updateFlightModeData(location: location)
+        }
+
+        // Update fly-to line
+        if isFlyingTo, let destination = flyToDestination, let location = newLoc {
+            flyToLine = [location.coordinate, destination]
+        }
+
+        // Update flight mode projection
+        if flightMode {
+            updateFlightModeProjection()
+        }
+    }
+
+    private func updateFlightModeData(location: CLLocation) {
+        // Track location history for heading calculation
+        headingLocationHistory.append(location)
+        if headingLocationHistory.count > 3 {
+            headingLocationHistory.removeFirst()
+        }
+
+        // Track speed history
+        let now = Date()
+        speedHistory.append((speed: location.speed, timestamp: now))
+        speedHistory.removeAll { now.timeIntervalSince($0.timestamp) > 60 }
+
+        // Calculate heading
+        if headingLocationHistory.count >= 2 {
+            let oldest = headingLocationHistory.first!
+            let newest = location
+            currentHeading = calculateBearing(from: oldest.coordinate, to: newest.coordinate)
+            print("🧭 [HEADING] From movement: \(currentHeading)°")
+        } else if location.course >= 0 {
+            currentHeading = location.course
+            print("🧭 [HEADING] From GPS course: \(currentHeading)°")
+        }
+    }
+
+    private func handleShowGroupPin(_ notification: Notification) {
+        if let pin = notification.object as? APIPin {
+            let coordinate = CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude)
+            let region = MKCoordinateRegion(
+                center: coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            )
+            setCameraPosition(.region(region), animated: true)
+        }
+    }
+
+    private func handleFieldImport(_ shouldImport: Bool) {
+        if shouldImport {
+            print("📍 Importing fields from SharedFieldStorage")
+            print("📍 Pending fields count: \(SharedFieldStorage.shared.pendingFieldsToImport.count)")
+            print("📍 Current importedFields count BEFORE: \(importedFields.count)")
+            importedFields.append(contentsOf: SharedFieldStorage.shared.pendingFieldsToImport)
+            SharedFieldStorage.shared.clearPendingFields()
+            print("📍 Current importedFields count AFTER: \(importedFields.count)")
+            print("📍 Imported field IDs: \(importedFields.map { $0.id })")
+            updateMapRegion(animated: true)
+
+            let count = importedFields.count
+            showAlert(title: "Fields Imported", message: "Added \(count) fields from Tabula to map")
+        }
+    }
+
+    private func handleFieldClear(_ shouldClear: Bool) {
+        if shouldClear {
+            let count = importedFields.count
+            importedFields.removeAll()
+            SharedFieldStorage.shared.shouldClearAllFields = false
+            showAlert(title: "Fields Cleared", message: "Removed \(count) field\(count == 1 ? "" : "s") from map")
+        }
+    }
+
+    private func removeSelectedFields() {
+        let count = selectedFieldIds.count
+        importedFields.removeAll { selectedFieldIds.contains($0.id) }
+        selectedFieldIds.removeAll()
+        isFieldSelectionMode = false
+        showAlert(title: "Fields Removed", message: "Removed \(count) field\(count == 1 ? "" : "s") from map")
+    }
+
+    private func zoomToField(_ field: FieldData) {
+        guard !field.coordinates.isEmpty else { return }
+
+        print("🎯 [ZOOM] Zooming to field: \(field.name)")
+
+        // Disable tracking mode if active
+        if userTrackingMode != .none {
+            userTrackingMode = .none
+            print("🎯 [ZOOM] Disabled tracking mode")
+        }
+
+        // Calculate bounding box of field coordinates
+        let lats = field.coordinates.map { $0.latitude }
+        let lons = field.coordinates.map { $0.longitude }
+
+        guard let minLat = lats.min(), let maxLat = lats.max(),
+              let minLon = lons.min(), let maxLon = lons.max() else {
+            print("🎯 [ZOOM] Failed to get min/max coordinates")
+            return
+        }
+
+        // Calculate center
+        let center = CLLocationCoordinate2D(
+            latitude: (minLat + maxLat) / 2,
+            longitude: (minLon + maxLon) / 2
+        )
+
+        // Calculate span with some padding (1.3x for nice framing)
+        let latDelta = max((maxLat - minLat) * 1.3, 0.001)
+        let lonDelta = max((maxLon - minLon) * 1.3, 0.001)
+
+        let region = MKCoordinateRegion(
+            center: center,
+            span: MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lonDelta)
+        )
+
+        print("🎯 [ZOOM] Center: \(center.latitude), \(center.longitude)")
+        print("🎯 [ZOOM] Span: \(latDelta), \(lonDelta)")
+
+        // Use native MapKit region setting
+        targetRegion = region
+        print("🎯 [ZOOM] Target region set")
+    }
+
+    private func hideField(_ field: FieldData) {
+        print("🗑️ Removing field from map: \(field.name)")
+
+        // Remove from map
+        importedFields.removeAll { $0.id == field.id }
+
+        // Remove from selection
+        selectedFieldIds.remove(field.id)
+
+        // Add to undo stack
+        hiddenFieldsStack.append(field)
+        print("📚 Undo stack size: \(hiddenFieldsStack.count)")
+    }
+
+    private func undoHideField() {
+        print("↩️ Undoing remove")
+
+        guard let field = hiddenFieldsStack.popLast() else { return }
+
+        print("📚 Restoring: \(field.name), stack size: \(hiddenFieldsStack.count)")
+
+        // Add back to map
+        importedFields.append(field)
+
+        // Add back to selection
+        selectedFieldIds.insert(field.id)
+    }
+
+    // MARK: - Computed Properties
+
+    private var selectedFields: [FieldData] {
+        importedFields.filter { selectedFieldIds.contains($0.id) }
+    }
+
+    // MARK: - Main Body (Simplified)
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            mapLayer
+                .onAppear(perform: handleOnAppear)
+                .onReceive(locationManager.$userLocation, perform: handleLocationUpdate)
+                .onReceive(refreshTimer) { _ in }
+                .onReceive(NotificationCenter.default.publisher(for: .coreDataDidChange)) { _ in
+                    Task { await reloadPins() }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .showGroupPinOnMap), perform: handleShowGroupPin)
+                .onReceive(SharedFieldStorage.shared.$shouldImportToMap, perform: handleFieldImport)
+                .onReceive(SharedFieldStorage.shared.$shouldClearAllFields, perform: handleFieldClear)
+                .id(refreshTrigger)
+
+            crosshairLayer
+            overlaysLayer
         }
 
         .confirmationDialog("User Location Options", isPresented: $showUserDialog) {
@@ -583,6 +747,68 @@ struct MapView: View {
         
         .sheet(isPresented: $showGroupManagement) {
             GroupManagementView()
+        }
+
+        .overlay(alignment: .topTrailing) {
+            // Field selection toggle button at top-right
+            Button {
+                isFieldSelectionMode.toggle()
+                if !isFieldSelectionMode {
+                    selectedFieldIds.removeAll()
+                    showSelectionInfo = false
+                } else if !selectedFieldIds.isEmpty {
+                    showSelectionInfo = true
+                }
+            } label: {
+                Image(systemName: isFieldSelectionMode ? "checkmark.circle.fill" : "checkmark.circle")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(12)
+                    .background(isFieldSelectionMode ? Color.green.opacity(0.8) : Color.black.opacity(0.6))
+                    .clipShape(Circle())
+                    .shadow(radius: 4)
+            }
+            .padding(.top, 60)
+            .padding(.trailing, 16)
+        }
+        .ignoresSafeArea(edges: .top)
+
+        .overlay(alignment: .trailing) {
+            if !selectedFieldIds.isEmpty && isFieldSelectionMode {
+                FieldSelectionSidebar(
+                    selectedFields: selectedFields,
+                    onDeselectAll: {
+                        selectedFieldIds.removeAll()
+                    },
+                    onRemoveSelected: {
+                        removeSelectedFields()
+                    },
+                    onDismiss: {
+                        showSelectionInfo = false
+                    },
+                    onFieldTap: { field in
+                        zoomToField(field)
+                    },
+                    onHideField: { field in
+                        hideField(field)
+                    },
+                    show: showSelectionInfo,
+                    undoCount: hiddenFieldsStack.count,
+                    onUndo: undoHideField
+                )
+                .ignoresSafeArea(edges: .all)
+            }
+        }
+
+        .onChange(of: selectedFieldIds) { oldValue, newValue in
+            // Show selection sheet when fields are selected in selection mode
+            if isFieldSelectionMode && !newValue.isEmpty {
+                showSelectionInfo = true
+            } else if newValue.isEmpty {
+                showSelectionInfo = false
+            }
+            // Trigger overlay refresh to update highlighting
+            forceOverlayRefresh.toggle()
         }
 
         .onChange(of: flightMode) { oldValue, newValue in
@@ -685,9 +911,9 @@ struct MapView: View {
                 if let route = navigationManager.selectedRoute {
                     navigationRoute = route
                 }
-                // Auto-enable heading tracking when navigation starts
-                userTrackingMode = .followWithHeading
-                print("🧭 [MAP VIEW] Navigation started - auto-enabled heading tracking")
+                // Auto-enable tracking when navigation starts using user preference
+                userTrackingMode = useHeadingUp ? .followWithHeading : .follow
+                print("🧭 [MAP VIEW] Navigation started - auto-enabled tracking (heading up: \(useHeadingUp))")
             case .idle, .arrived:
                 print("🧭 [MAP VIEW] Navigation ending - clearing all routes")
                 navigationRoute = nil
@@ -814,7 +1040,26 @@ struct MapView: View {
                     showGroupsButton: $showGroupsButton,
                     showFilesButton: $showFilesButton,
                     showMPZImportButton: $showMPZImportButton,
-                    headingUpMode: $headingUpMode
+                    showPanicButton: $showPanicButton,
+                    headingUpMode: $useHeadingUp,
+                    onMeasureTool: {
+                        isMeasuring.toggle()
+                        if !isMeasuring {
+                            clearMeasurements()
+                        }
+                    },
+                    onGroups: {
+                        showGroupManagement = true
+                    },
+                    onFiles: {
+                        showFileManager = true
+                    },
+                    onMPZImport: {
+                        showImport = true
+                    },
+                    onPanic: {
+                        loadAllRTSOrders()
+                    }
                 )
                 .presentationDetents([.fraction(0.70)])
             }
@@ -831,26 +1076,43 @@ struct MapView: View {
                 }
             }
 
-            if !importedFields.isEmpty {
-                Button { showImportedFields.toggle(); updateMapRegion(animated: true) } label: {
-                    Image(systemName: showImportedFields ? "eye.slash.fill" : "eye.fill")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(Color.black.opacity(0.6))
+            // Panic button - loads all RTS orders
+            if showPanicButton {
+                Button {
+                    loadAllRTSOrders()
+                } label: {
+                    Image("panic-attack")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 40, height: 40)
+                        .padding(8)
+                        .background(Color.red.opacity(0.9))
                         .clipShape(Circle())
                         .shadow(radius: 5)
                 }
             }
 
+            // Auto-center button - toggles tracking on/off using setting preference
             Button {
-                userTrackingMode = userTrackingMode == .followWithHeading ? .none : .followWithHeading
+                if userTrackingMode == .none {
+                    // Enable tracking with the user's preferred mode
+                    userTrackingMode = useHeadingUp ? .followWithHeading : .follow
+                    RemoteLogger.shared.log("🗺️ [MAP] Auto-center: Enabled (heading up: \(useHeadingUp))")
+                    print("🗺️ [MAP] Auto-center enabled with mode: \(userTrackingMode.rawValue)")
+                } else {
+                    // Disable tracking
+                    userTrackingMode = .none
+                    RemoteLogger.shared.log("🗺️ [MAP] Auto-center: Disabled")
+                    print("🗺️ [MAP] Auto-center disabled")
+                }
             } label: {
-                Image(systemName: userTrackingMode == .followWithHeading ? "location.north.line.fill" : "location.north.line")
+                Image(systemName: userTrackingMode == .none ? "location" :
+                                 (useHeadingUp ? "location.north.line.fill" : "location.fill"))
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(.white)
                     .padding()
-                    .background(userTrackingMode == .followWithHeading ? Color.blue.opacity(0.8) : Color.black.opacity(0.6))
+                    .background(userTrackingMode == .none ?
+                               Color.black.opacity(0.6) : Color.blue.opacity(0.7))
                     .clipShape(Circle())
                     .shadow(radius: 5)
             }
@@ -960,24 +1222,132 @@ struct MapView: View {
         do {
             // Get all user's groups
             let groups = try await PinSyncService.shared.getUserGroups()
-            
+
             // Fetch pins from all groups (including your own)
             var allGroupPins: [APIPin] = []
             for group in groups {
                 let pins = try await PinSyncService.shared.getGroupPins(groupId: group.id)
                 allGroupPins.append(contentsOf: pins)
             }
-            
+
             await MainActor.run {
                 groupPins = allGroupPins
             }
-            
+
             print("✅ Loaded \(allGroupPins.count) total group pins")
         } catch {
             print("❌ Failed to load group pins: \(error)")
         }
     }
-    
+
+    private func loadAllRTSOrders() {
+        Task {
+            do {
+                print("🚨 [PANIC] Loading all RTS orders...")
+
+                // Fetch all field maps for customer 5429
+                guard let url = URL(string: "https://jobs.rotorsync.com/api/field-maps/customer/5429") else {
+                    throw URLError(.badURL)
+                }
+
+                let (data, _) = try await URLSession.shared.data(from: url)
+                let apiResponse = try JSONDecoder().decode(JobsAPIResponse.self, from: data)
+
+                // Filter for RTS orders using the rts boolean field
+                let rtsOrders = apiResponse.data.filter { $0.rts }
+                print("🚨 [PANIC] Found \(rtsOrders.count) RTS orders")
+
+                // Color conversion map
+                let colorMap: [String: String] = [
+                    "red": "#FF0000", "orange": "#FF8C00", "yellow": "#FFFF00",
+                    "green": "#00FF00", "teal": "#00FFFF", "blue": "#0000FF",
+                    "purple": "#9966FF", "pink": "#FF69B4", "magenta": "#FF00FF",
+                    "gray": "#404040", "grey": "#404040", "black": "#000000", "white": "#FFFFFF"
+                ]
+
+                var newFields: [FieldData] = []
+
+                for job in rtsOrders {
+                    // Check cache first
+                    if let cached = FieldGeometryCache.shared.getCachedGeometry(fieldId: job.id) {
+                        let boundaries = cached.boundaries
+                        let sprayLines = cached.sprayLines
+                        print("✅ Cache hit for \(job.id) - \(boundaries.count) boundaries")
+
+                        // Convert colors
+                        var fillColor = ""
+                        if let colorName = job.color {
+                            let name = colorName.lowercased().trimmingCharacters(in: .whitespaces)
+                            fillColor = name.hasPrefix("#") ? colorName : (colorMap[name] ?? "")
+                        }
+
+                        var strokeColor: String? = nil
+                        if let boundaryColorName = job.boundaryColor, !boundaryColorName.isEmpty {
+                            let name = boundaryColorName.lowercased().trimmingCharacters(in: .whitespaces)
+                            strokeColor = name.hasPrefix("#") ? boundaryColorName : colorMap[name]
+                        }
+
+                        let contractorDash = job.contractor.flatMap { ContractorDashSettingsManager.shared.getDashColor(for: $0) }
+
+                        // Create field entries for each boundary
+                        let sortedBoundaries = boundaries.sorted { calculatePolygonArea($0) > calculatePolygonArea($1) }
+                        for (index, boundary) in sortedBoundaries.enumerated() {
+                            let fieldName = sortedBoundaries.count > 1 ? "#\(job.id) \(index + 1)/\(sortedBoundaries.count)" : "#\(job.id)"
+                            let fieldData = FieldData(
+                                id: job.id + index * 10000, jobId: job.id,
+                                name: fieldName,
+                                coordinates: boundary,
+                                acres: job.area * 2.47105 / Double(sortedBoundaries.count),
+                                color: fillColor,
+                                boundaryColor: strokeColor,
+                                contractorDashColor: contractorDash,
+                                category: job.status,
+                                application: nil,
+                                description: nil,
+                                prodDupli: job.prodDupli,
+                                productList: job.productList,
+                                notes: job.notes,
+                                address: job.address,
+                                source: .tabula,
+                                crop: job.crop,
+                                nominalAcres: (job.areaNominal ?? 0) * 2.47105,
+                                workedCoordinates: sprayLines
+                            )
+                            newFields.append(fieldData)
+                        }
+                    } else {
+                        print("⚠️ No cache for \(job.id) - skipping")
+                    }
+                }
+
+                await MainActor.run {
+                    importedFields.append(contentsOf: newFields)
+                    Task { await saveFieldsToCoreData(newFields) }
+                    showAlert(title: "🚨 Panic Mode Activated!",
+                             message: "Loaded \(newFields.count) RTS orders onto the map")
+                }
+
+                print("✅ [PANIC] Successfully loaded \(newFields.count) RTS fields")
+            } catch {
+                print("❌ [PANIC] Error: \(error)")
+                await MainActor.run {
+                    showAlert(title: "Error", message: "Failed to load RTS orders: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    private func calculatePolygonArea(_ coords: [CLLocationCoordinate2D]) -> Double {
+        guard coords.count >= 3 else { return 0 }
+        var area: Double = 0
+        for i in 0..<coords.count {
+            let j = (i + 1) % coords.count
+            area += coords[i].latitude * coords[j].longitude
+            area -= coords[j].latitude * coords[i].longitude
+        }
+        return abs(area / 2.0)
+    }
+
     private func handleImportResult(result: Result<[URL], Error>) {
         isLoadingMPZ = true
         Task {
@@ -1196,6 +1566,9 @@ struct MapView: View {
 
     /// Update flight mode projection ray and time markers based on current heading and speed
     private func updateFlightModeProjection() {
+        // Throttle updates to 3x per second (0.33 seconds)
+        guard Date().timeIntervalSince(lastProjectionUpdate) > 0.33 else { return }
+        lastProjectionUpdate = Date()
         guard let location = locationManager.userLocation, flightMode else {
             // Clear projection if flight mode is off or no location
             projectionRayLine = []

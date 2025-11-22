@@ -613,6 +613,9 @@ struct FieldMapsTableView: View {
                     continue
                 }
 
+                print("📊 [IMPORT] Job \(jobId) - area: \(job.area) ha, area_nominal: \(job.areaNominal ?? 0) ha → \((job.areaNominal ?? 0) * 2.47105) acres")
+
+
                 // Try cache first for instant import
                 print("🔍 Checking cache for job \(jobId)...")
                 if let cached = FieldGeometryCache.shared.getCachedGeometry(fieldId: jobId) {
@@ -708,7 +711,7 @@ struct FieldMapsTableView: View {
                             productList: job.productList,
                             notes: job.notes,
                             address: job.address,
-                            source: .tabula, crop: job.crop, nominalAcres: (job.grossCoverageArea ?? 0) * 2.47105,
+                            source: .tabula, crop: job.crop, nominalAcres: (job.areaNominal ?? 0) * 2.47105,
                             workedCoordinates: sprayLines
                         )
                         fields.append(fieldData)
@@ -906,7 +909,7 @@ struct FieldMapsTableView: View {
                         productList: job.productList,
                         notes: job.notes,
                         address: job.address,
-                        source: .tabula, crop: job.crop, nominalAcres: (job.grossCoverageArea ?? 0) * 2.47105,
+                        source: .tabula, crop: job.crop, nominalAcres: (job.areaNominal ?? 0) * 2.47105,
                         workedCoordinates: workedPolygons
                     )
                     fields.append(fieldData)

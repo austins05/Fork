@@ -245,6 +245,59 @@ class TabulaAPIService: ObservableObject {
         return (200...299).contains(httpResponse.statusCode)
     }
 
+    // MARK: - Order Completion Methods
+
+    /// Update custom fields for a Tabula order
+    func updateCustomFields(jobId: String, fields: [String: String]) async throws -> TabulaUpdateResponse {
+        guard let url = URL(string: "\(baseURL)/tabula/update-fields") else {
+            throw APIError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = [
+            "jobId": jobId,
+            "fields": fields
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.invalidResponse
+        }
+
+        let apiResponse = try JSONDecoder().decode(TabulaUpdateResponse.self, from: data)
+        return apiResponse
+    }
+
+    /// Complete a Tabula order
+    func completeOrder(jobId: String) async throws -> TabulaCompleteResponse {
+        guard let url = URL(string: "\(baseURL)/tabula/complete-order") else {
+            throw APIError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body = ["jobId": jobId]
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.invalidResponse
+        }
+
+        let apiResponse = try JSONDecoder().decode(TabulaCompleteResponse.self, from: data)
+        return apiResponse
+    }
+
     // MARK: - Sync Methods
 
     /// Trigger backend sync to refresh data from Tabula
@@ -275,6 +328,29 @@ class TabulaAPIService: ObservableObject {
         print("✅ Backend sync completed: \(success)")
         return success
     }
+}
+
+// MARK: - Response Models
+
+struct TabulaUpdateResponse: Codable {
+    let success: Bool
+    let data: TabulaUpdateData?
+    let jobId: String?
+}
+
+struct TabulaUpdateData: Codable {
+    let status: [String]?
+}
+
+struct TabulaCompleteResponse: Codable {
+    let success: Bool
+    let data: TabulaCompleteData?
+    let jobId: String?
+}
+
+struct TabulaCompleteData: Codable {
+    let status: [String]?
+    let error: [String]?
 }
 
 // MARK: - API Error Types

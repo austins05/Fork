@@ -16,7 +16,7 @@ struct TabulaJob: Identifiable, Codable {
     let customer: String
     let contractor: String?
     let area: Double  // Requested area
-    let grossCoverageArea: Double?  // Nominal/worked area (optional)
+    let areaNominal: Double?  // Nominal area from area_nominal field (optional)
     let status: String
     let orderNumber: String
     let requestedUrl: String?
@@ -33,7 +33,8 @@ struct TabulaJob: Identifiable, Codable {
     let rts: Bool
     let crop: String?
     enum CodingKeys: String, CodingKey {
-        case id, name, customer, contractor, area, grossCoverageArea, status
+        case id, name, customer, contractor, area, status
+        case areaNominal = "area_nominal"
         case orderNumber, requestedUrl, workedUrl
         case modifiedDate, dueDate, productList, prodDupli, color, boundaryColor
         case address, notes, deleted, rts, crop
